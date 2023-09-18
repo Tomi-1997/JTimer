@@ -1,5 +1,4 @@
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Scanner;
 public class Main
 {
@@ -7,7 +6,7 @@ public class Main
         Jingle from https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    static int minute = 1;
+    static final int MINUTE = 60;
     public static void main(String[] args) throws InterruptedException, IOException
     {
         /*
@@ -110,7 +109,7 @@ public class Main
         for (int i = minutes; i > 0; i--)
         {
             System.out.println(i + " minutes left");
-            Thread.sleep(minute * 1000L);
+            Thread.sleep(MINUTE * 1000L);
         }
     }
 
