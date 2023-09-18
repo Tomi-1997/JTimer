@@ -12,19 +12,31 @@ public class Main
         /*
             Info and constants
          */
-        System.out.println("- JTimer - ");
-        System.out.println("- Usages:");
-        System.out.println("- java -jar JTimer.jar");
-        System.out.println("- java -jar JTimer.jar -l (for a lower volume)");
-        System.out.println("- java -jar JTimer.jar -L (for a much lower volume)");
+        prettyPrint("- JTimer - ");
+        prettyPrint("- Flags:");
+        prettyPrint("-l to lower volume, -L to lower it dramatically, a number to begin timer immediately");
+        prettyPrint("- Examples:");
+        prettyPrint("- java -jar JTimer.jar");
+        prettyPrint("- java -jar JTimer.jar -L (for a much lower volume)");
+        prettyPrint("- java -jar JTimer.jar -l 20 (to start lower, without any more prompts)");
         String filename = "jingle.wav";
-        float volume = 0;
 
+
+        float volume = 0;
+        int minutes = -1;
+        boolean invalidNumInput = true;
         /*
             Parse flags
          */
         for (String flag : args)
         {
+            if (isNumber(flag))
+            {
+                minutes = Integer.parseInt(flag);
+                if (minutes < 0) minutes = -minutes;
+                invalidNumInput = false;
+                continue;
+            }
             if (flag.length() != 2) continue;
             if (flag.charAt(0) != '-') continue;
 
@@ -36,28 +48,53 @@ public class Main
         }
 
         /*
-            Get input
+            Get input, or skip if user entered number already
          */
-        Scanner in = new Scanner(System.in);
-        System.out.println("Enter the number of minutes");
-        boolean invalid = true;
-        int minutes = 20;
+        if (invalidNumInput)
+        {
+            String testText = "'test' to check the volume, ";
+            String lowerText = "'lower' to decrease volume, ";
+            String undoText = "'undo' to cancel previous 'lower' command";
+            prettyPrint("Enter the number of minutes to begin, or:\n" + testText + lowerText + undoText);
+        }
+
 
         /*
             Validate input
          */
-        while (invalid)
+        Scanner in = new Scanner(System.in);
+        while (invalidNumInput)
         {
             String input = in.nextLine();
+            boolean skipParse = false;
+            if (input.toLowerCase().contains("lower"))
+            {
+                prettyPrint("Lowered volume");
+                volume -= 10;
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("undo"))
+            {
+                prettyPrint("Undid lowering");
+                volume = Math.min(0, volume + 10);
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("test"))
+            {
+                prettyPrint("Playing ");
+                Audio.play(filename, volume);
+                skipParse = true;
+            }
+            if (skipParse) continue;
             try
             {
                 minutes = Integer.parseInt(input);
                 if (minutes < 0) minutes = -minutes;
-                invalid = false;
+                invalidNumInput = false;
             }
             catch (Exception e)
             {
-                System.out.println("Enter a valid number");
+                prettyPrint("Enter a valid number \\ command");
                 // Continue loop
             }
         }
@@ -67,7 +104,7 @@ public class Main
          */
         if (minutes > 60)
         {
-            System.out.println("You have entered more than an hour ("+minutes+" min), are you sure? press enter to continue");
+            prettyPrint("You have entered more than an hour ("+minutes+" min), are you sure? press enter to continue");
             listenForEnter();
         }
 
@@ -83,6 +120,19 @@ public class Main
             System.out.println("Press enter to restart");
             listenForEnter();
         }
+    }
+
+    private static boolean isNumber(String flag)
+    {
+        try
+        {
+            Integer.parseInt(flag);
+        }
+        catch (Exception e)
+        {
+            return false;
+        }
+        return true;
     }
 
     private static void flush() throws IOException
@@ -117,5 +167,15 @@ public class Main
     {
         int ignored = System.in.read(new byte[2]); // Enter
         ignored = System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
+    }
+
+    private static void prettyPrint(String toPrint) throws InterruptedException
+    {
+        for (int i = 0; i < toPrint.length(); i++)
+        {
+            System.out.print(toPrint.charAt(i));
+            Thread.sleep(5);
+        }
+        System.out.println();
     }
 }

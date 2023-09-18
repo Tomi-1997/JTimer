@@ -7,10 +7,16 @@ import java.net.URL;
 
 public class Audio
 {
+    /*
+        Jingle from https://freesound.org/people/phantastonia/sounds/270602/#
+     */
     public static void play(String filename, float vol)
     {
         try
         {
+            /*
+                Open file
+             */
             URL url = Audio.class.getClassLoader().getResource(filename);
             assert url != null;
             AudioInputStream audioIn = AudioSystem.getAudioInputStream(url);
