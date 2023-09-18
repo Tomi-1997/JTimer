@@ -7,7 +7,7 @@ public class Main
         Jingle from https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    static int minute = 60;
+    static int minute = 1;
     public static void main(String[] args) throws InterruptedException, IOException
     {
         /*
@@ -44,6 +44,9 @@ public class Main
         boolean invalid = true;
         int minutes = 20;
 
+        /*
+            Validate input
+         */
         while (invalid)
         {
             String input = in.nextLine();
@@ -60,21 +63,33 @@ public class Main
             }
         }
 
-        // Entered a high number
+        /*
+            Another validation
+         */
         if (minutes > 60)
         {
             System.out.println("You have entered more than an hour ("+minutes+" min), are you sure? press enter to continue");
             listenForEnter();
         }
 
+        /*
+            Main loop - print to console each minute, play a jingle at the end, wait for enter, repeat.
+         */
         while (true)
         {
             consoleClear();
             countdown(minutes);
             Audio.play(filename, volume);
+            flush();
             System.out.println("Press enter to restart");
             listenForEnter();
         }
+    }
+
+    private static void flush() throws IOException
+    {
+        int ignored;
+        ignored = System.in.read(new byte[System.in.available()]);
     }
 
     private static void consoleClear() throws IOException, InterruptedException
@@ -101,7 +116,7 @@ public class Main
 
     private static void listenForEnter() throws IOException
     {
-        int ignored = System.in.read(new byte[2]);
-        ignored = System.in.read(new byte[System.in.available()]);
+        int ignored = System.in.read(new byte[2]); // Enter
+        ignored = System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
     }
 }
