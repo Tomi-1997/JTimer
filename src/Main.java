@@ -1,4 +1,4 @@
-import java.io.IOException;
+import java.io.*;
 import java.util.Scanner;
 public class Main
 {
@@ -9,32 +9,20 @@ public class Main
     static final int MINUTE = 60;
     public static void main(String[] args) throws InterruptedException, IOException
     {
-        /*
-            Info and constants
-         */
-        prettyPrint("- JTimer - ");
-        prettyPrint("- Flags:");
-        prettyPrint("-l to lower volume, -L to lower it dramatically, a number to begin timer immediately");
-        prettyPrint("- Examples:");
-        prettyPrint("- java -jar JTimer.jar");
-        prettyPrint("- java -jar JTimer.jar -L (for a much lower volume)");
-        prettyPrint("- java -jar JTimer.jar -l 20 (to start lower, without any more prompts)");
+        // Required variables
         String filename = "jingle.wav";
-
-
         float volume = 0;
         int minutes = -1;
-        boolean invalidNumInput = true;
-        /*
-            Parse flags
-         */
+        boolean minInputMissing = true;
+
+        // Parse flags
         for (String flag : args)
         {
             if (isNumber(flag))
             {
                 minutes = Integer.parseInt(flag);
                 if (minutes < 0) minutes = -minutes;
-                invalidNumInput = false;
+                minInputMissing = false;
                 continue;
             }
             if (flag.length() != 2) continue;
@@ -47,23 +35,12 @@ public class Main
             }
         }
 
-        /*
-            Get input, or skip if user entered number already
-         */
-        if (invalidNumInput)
-        {
-            String testText = "'test' to check the volume, ";
-            String lowerText = "'lower' to decrease volume, ";
-            String undoText = "'undo' to cancel previous 'lower' command";
-            prettyPrint("Enter the number of minutes to begin, or:\n" + testText + lowerText + undoText);
-        }
+        // If input in flags, skip- else print info and get user input
+        if (minInputMissing) printInfo();
 
-
-        /*
-            Validate input
-         */
+        // Validate user input
         Scanner in = new Scanner(System.in);
-        while (invalidNumInput)
+        while (minInputMissing)
         {
             String input = in.nextLine();
             boolean skipParse = false;
@@ -90,7 +67,7 @@ public class Main
             {
                 minutes = Integer.parseInt(input);
                 if (minutes < 0) minutes = -minutes;
-                invalidNumInput = false;
+                minInputMissing = false;
             }
             catch (Exception e)
             {
@@ -99,18 +76,14 @@ public class Main
             }
         }
 
-        /*
-            Another validation
-         */
+        // Print warning if entered a large amount
         if (minutes > 60)
         {
             prettyPrint("You have entered more than an hour ("+minutes+" min), are you sure? press enter to continue");
             listenForEnter();
         }
 
-        /*
-            Main loop - print to console each minute, play a jingle at the end, wait for enter, repeat.
-         */
+        // Main loop - print to console each minute, play a jingle at the end, wait for enter, repeat.
         while (true)
         {
             consoleClear();
@@ -119,6 +92,22 @@ public class Main
             flush();
             System.out.println("Press enter to restart");
             listenForEnter();
+        }
+    }
+
+    private static void printInfo()
+    {
+        try
+        {
+            InputStream is = Main.class.getResourceAsStream("info.txt");
+            assert is != null;
+            Scanner in = new Scanner(is);
+            while (in.hasNext()) prettyPrint(in.nextLine());
+        }
+        catch (Exception e)
+        {
+//            e.printStackTrace();
+            System.out.println("Could not open info file, enter the number of minutes to begin");
         }
     }
 
