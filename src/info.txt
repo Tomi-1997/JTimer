@@ -1,0 +1,9 @@
+- JTimer -
+- Flags:
+-l to lower volume, -L to lower it dramatically, a number to begin timer immediately
+- Examples:
+- java -jar JTimer.jar
+- java -jar JTimer.jar -L (for a much lower volume)
+- java -jar JTimer.jar -l 20 (to start lower, without any more prompts)
+Enter the number of minutes to begin, or:
+'test' to check the volume, 'lower' to decrease volume, 'undo' to cancel previous 'lower' command
