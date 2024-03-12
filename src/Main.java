@@ -1,19 +1,33 @@
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.security.CodeSource;
+import java.util.ArrayList;
+import java.util.Objects;
+import java.util.Random;
 import java.util.Scanner;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
 public class Main
 {
     /*
-        Jingle from https://freesound.org/people/phantastonia/sounds/270602/#
+        Jingles from pixabay.com, https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
     static final int MINUTE = 60;
     public static void main(String[] args) throws InterruptedException, IOException
     {
         // Required variables
-        String filename = "jingle.wav";
+        String folderName = "jingles";
         float volume = 0;
         int minutes = -1;
         boolean minInputMissing = true;
+
+        // Init jingle list
+        ArrayList<String> files = new ArrayList<>();
+        initJingles(files, folderName);
 
         // Parse flags
         for (String flag : args)
@@ -59,7 +73,7 @@ public class Main
             if (input.toLowerCase().contains("test"))
             {
                 prettyPrint("Playing ");
-                Audio.play(filename, volume);
+                playRandom(files, volume);
                 skipParse = true;
             }
             if (skipParse) continue;
@@ -88,10 +102,41 @@ public class Main
         {
             consoleClear();
             countdown(minutes);
-            Audio.play(filename, volume);
+            playRandom(files, volume);
             flush();
             System.out.println("Press enter to restart");
             listenForEnter();
+        }
+    }
+
+    private static void initJingles(ArrayList<String> files, String filename) throws IOException
+    {
+        initJinglesJAR(files);
+        if (files.size() > 0) return;
+
+        File f = new File("src\\" + filename);
+        for (String str : Objects.requireNonNull(f.list()))
+        {
+            files.add(filename + "\\" + str);
+        }
+    }
+
+    private static void initJinglesJAR(ArrayList<String> files) throws IOException
+    {
+        CodeSource src = Main.class.getProtectionDomain().getCodeSource();
+
+        if( src != null ) {
+            URL jar = src.getLocation();
+            ZipInputStream zip = new ZipInputStream( jar.openStream());
+            ZipEntry ze;
+
+            while( ( ze = zip.getNextEntry() ) != null ) {
+                String entryName = ze.getName();
+                if( entryName.endsWith(".wav") ) {
+                    files.add( entryName  );
+                }
+            }
+
         }
     }
 
@@ -163,8 +208,15 @@ public class Main
         for (int i = 0; i < toPrint.length(); i++)
         {
             System.out.print(toPrint.charAt(i));
-            Thread.sleep(5);
+            Thread.sleep(2);
         }
         System.out.println();
+    }
+
+    private static void playRandom(ArrayList<String> files, float volume)
+    {
+        int rndIndex = new Random().nextInt(files.size());
+        String filename = files.get(rndIndex);
+        Audio.play(filename, volume);
     }
 }
