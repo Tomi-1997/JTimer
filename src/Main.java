@@ -16,16 +16,16 @@ public class Main
         Jingles from pixabay.com, https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    static final int MINUTE = 60;
+    static final int SEC_IN_MINUTE = 60;
     public static void main(String[] args) throws InterruptedException, IOException
     {
         // Required variables
-        String folderName = "jingles";
-        float volume = 0;
-        int minutes = -1;
-        boolean minInputMissing = true;
+        String folderName = "jingles";      // Folder to play jingles from
+        float volume = 0;                   // Default volume level
+        int minutes = -1;                   // Minute amount between each session
+        boolean minutesInputMissing = true; // Did the program start without minutes as a flag
 
-        // Init jingle list
+        // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
         initJingles(files, folderName);
 
@@ -36,9 +36,11 @@ public class Main
             {
                 minutes = Integer.parseInt(flag);
                 if (minutes < 0) minutes = -minutes;
-                minInputMissing = false;
+                minutesInputMissing = false;
                 continue;
             }
+
+            // If the following flags don't match the "-char" pattern, continue
             if (flag.length() != 2) continue;
             if (flag.charAt(0) != '-') continue;
 
@@ -50,11 +52,11 @@ public class Main
         }
 
         // If input in flags, skip- else print info and get user input
-        if (minInputMissing) printInfo();
+        if (minutesInputMissing) printInfo();
 
-        // Validate user input
+        // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
-        while (minInputMissing)
+        while (minutesInputMissing)
         {
             String input = in.nextLine();
             boolean skipParse = false;
@@ -81,7 +83,7 @@ public class Main
             {
                 minutes = Integer.parseInt(input);
                 if (minutes < 0) minutes = -minutes;
-                minInputMissing = false;
+                minutesInputMissing = false;
             }
             catch (Exception e)
             {
@@ -97,7 +99,10 @@ public class Main
             listenForEnter();
         }
 
-        // Main loop - print to console each minute, play a jingle at the end, wait for enter, repeat.
+        // Main loop -
+        // 1 print to console each minute
+        // 2 play a jingle at the end
+        // 3 wait for enter
         while (true)
         {
             consoleClear();
@@ -111,9 +116,11 @@ public class Main
 
     private static void initJingles(ArrayList<String> files, String filename) throws IOException
     {
+        /* Ran as a JAR, add all files that end with .wav */
         initJinglesJAR(files);
         if (files.size() > 0) return;
 
+        /* Ran from IDE, add all files from the given folder */
         File f = new File("src\\" + filename);
         for (String str : Objects.requireNonNull(f.list()))
         {
@@ -193,7 +200,7 @@ public class Main
         for (int i = minutes; i > 0; i--)
         {
             System.out.println(i + " minutes left");
-            Thread.sleep(MINUTE * 1000L);
+            Thread.sleep(SEC_IN_MINUTE * 1000L);
         }
     }
 
