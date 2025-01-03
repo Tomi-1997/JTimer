@@ -3,10 +3,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.security.CodeSource;
-import java.util.ArrayList;
-import java.util.Objects;
-import java.util.Random;
-import java.util.Scanner;
+import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -109,6 +106,8 @@ public class Main
             countdown(minutes);
             playRandom(files, volume);
             flush();
+            System.out.println("Stopped at:");
+            System.out.println(Calendar.getInstance().getTime());
             System.out.println("Press enter to restart");
             listenForEnter();
         }
