@@ -14,6 +14,8 @@ public class Main
      */
 
     static final int SEC_IN_MINUTE = 60;
+    static final long MILLI_TO_SEC = 1000L;
+    static int screenTimeSumMin = 0;
     public static void main(String[] args) throws InterruptedException, IOException
     {
         // Required variables
@@ -108,9 +110,27 @@ public class Main
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
+            System.out.println("Overall Screen Time: " + getScreenTimeSum());
             System.out.println("Press enter to restart");
             listenForEnter();
         }
+    }
+
+    private static String getScreenTimeSum()
+    {
+        int screenTime = screenTimeSumMin;
+        int hours = 0, minutes;
+        String ans = "";
+        while (screenTime >= 60)
+        {
+            screenTime = screenTime - 60;
+            hours++;
+        }
+        minutes = screenTime;
+        ans += hours > 9? hours : "0" + hours;
+        ans += ":";
+        ans += minutes > 9? minutes : "0" + minutes;
+        return ans;
     }
 
     private static void initJingles(ArrayList<String> files, String filename) throws IOException
@@ -199,8 +219,9 @@ public class Main
         for (int i = minutes; i > 0; i--)
         {
             System.out.println(i + " minutes left");
-            Thread.sleep(SEC_IN_MINUTE * 1000L);
+            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
         }
+        screenTimeSumMin = screenTimeSumMin + minutes;
     }
 
     private static void listenForEnter() throws IOException
