@@ -1,8 +1,14 @@
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.PrintWriter;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.CodeSource;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -15,14 +21,17 @@ public class Main
 
     static final int SEC_IN_MINUTE = 60;
     static final long MILLI_TO_SEC = 1000L;
-    static int screenTimeSumMin = 0;
+    static int screenTimeSumMinutes = 0;
+    static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
+
     public static void main(String[] args) throws InterruptedException, IOException
     {
         // Required variables
-        String folderName = "jingles";      // Folder to play jingles from
-        float volume = 0;                   // Default volume level
-        int minutes = -1;                   // Minute amount between each session
-        boolean minutesInputMissing = true; // Did the program start without minutes as a flag
+        String folderName = "jingles";                  // Folder to play jingles from
+        String textFileName = ".JTimer_Screen_Time";    // Saved screen time between program runs (date, sum)
+        float volume = 0;                               // Default volume level
+        int minutes = -1;                               // Minute amount between each session
+        boolean minutesInputMissing = true;             // Did the program start without minutes as a flag
 
         // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
@@ -98,6 +107,10 @@ public class Main
             listenForEnter();
         }
 
+        // Try to read from file accumulated minutes
+        // If earlier date, reset
+        parseLogFile(textFileName);
+
         // Main loop -
         // 1 print to console each minute
         // 2 play a jingle at the end
@@ -105,20 +118,58 @@ public class Main
         while (true)
         {
             consoleClear();
-            countdown(minutes);
+            countdown(minutes, textFileName);
             playRandom(files, volume);
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
-            System.out.println("Overall Screen Time: " + getScreenTimeSum());
+            System.out.println("Overall Screen Time: " + getScreenTimeSumString());
             System.out.println("Press enter to restart");
             listenForEnter();
         }
     }
 
-    private static String getScreenTimeSum()
+    private static void parseLogFile(String filename)
     {
-        int screenTime = screenTimeSumMin;
+        Path file = Paths.get(filename);
+        try
+        {
+            List<String> s = Files.readAllLines(file);
+            String fileDate = s.get(0);
+
+            // Different day, don't load data
+            if (fileDate.compareTo(currentDate) != 0)
+            {
+                return;
+            }
+
+            // Parse accumulated minutes to int
+            screenTimeSumMinutes = Integer.parseInt(s.get(1));
+        }
+        catch (IOException ignored)
+        {
+
+        }
+    }
+
+    private static void writeLogFile(String filename, int minutes)
+    {
+        try
+        {
+            PrintWriter writer = new PrintWriter(filename, StandardCharsets.UTF_8);
+            writer.println(currentDate);
+            writer.println(minutes);
+            writer.close();
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+        }
+    }
+
+    private static String getScreenTimeSumString()
+    {
+        int screenTime = screenTimeSumMinutes;
         int hours = 0, minutes;
         String ans = "";
         while (screenTime >= 60)
@@ -151,15 +202,18 @@ public class Main
     {
         CodeSource src = Main.class.getProtectionDomain().getCodeSource();
 
-        if( src != null ) {
+        if( src != null )
+        {
             URL jar = src.getLocation();
             ZipInputStream zip = new ZipInputStream( jar.openStream());
             ZipEntry ze;
 
-            while( ( ze = zip.getNextEntry() ) != null ) {
+            while( ( ze = zip.getNextEntry() ) != null )
+            {
                 String entryName = ze.getName();
-                if( entryName.endsWith(".wav") ) {
-                    files.add( entryName  );
+                if( entryName.endsWith(".wav") )
+                {
+                    files.add( entryName );
                 }
             }
 
@@ -214,14 +268,15 @@ public class Main
         }
     }
 
-    private static void countdown(int minutes) throws InterruptedException
+    private static void countdown(int minutes, String filename) throws InterruptedException
     {
         for (int i = minutes; i > 0; i--)
         {
             System.out.println(i + " minutes left");
             Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
+            screenTimeSumMinutes++;
+            writeLogFile(filename, screenTimeSumMinutes);
         }
-        screenTimeSumMin = screenTimeSumMin + minutes;
     }
 
     private static void listenForEnter() throws IOException

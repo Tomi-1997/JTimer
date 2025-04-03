@@ -1,9 +1,12 @@
 # JTimer
-JTimer is a small java console code \ script to remind yourself to take a break.
+JTimer is a productivity java console application to moderate your screen time.
 ## Usage
-Set a certain time limit, e.g 20 minutes. <br>
+Set a certain time limit, e.g. 20 minutes. <br>
 Every 20 minutes a jingle will play, indicating for a break. <br>
 Once you are back, press enter to reset the timer. <br>
+<br>
+Screen time is accumulated and logged to a local file which stores the current date and screen time. <br>
+If a different date is found, screen time is reset. <br>
 ## Flags
 ```bash
 java -jar JTimer.jar
