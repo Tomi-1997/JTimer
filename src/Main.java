@@ -32,6 +32,7 @@ public class Main
         float volume = 0;                               // Default volume level
         int minutes = -1;                               // Minute amount between each session
         boolean minutesInputMissing = true;             // Did the program start without minutes as a flag
+        boolean notification = true;                    // Get attention with User notification tray
 
         // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
@@ -86,6 +87,12 @@ public class Main
                 playRandom(files, volume);
                 skipParse = true;
             }
+            if (input.toLowerCase().contains("notify"))
+            {
+                notification = !notification;
+                prettyPrint("Notification Active: " + notification);
+                skipParse = true;
+            }
             if (skipParse) continue;
             try
             {
@@ -111,6 +118,11 @@ public class Main
         // If earlier date, reset
         parseLogFile(textFileName);
 
+
+        // Notification when it is time to rest
+        Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
+
+
         // Main loop -
         // 1 print to console each minute
         // 2 play a jingle at the end
@@ -119,13 +131,19 @@ public class Main
         {
             consoleClear();
             countdown(minutes, textFileName);
+
+            // Countdown over
+            notifier.notifyUser();
             playRandom(files, volume);
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
             System.out.println("Overall Screen Time: " + getScreenTimeSumString());
             System.out.println("Press enter to restart");
+
+            // Awaiting user
             listenForEnter();
+            notifier.notifyRemove();
         }
     }
 
