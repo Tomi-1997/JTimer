@@ -21,54 +21,36 @@ public class Main {
      * https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    static final int SEC_IN_MINUTE = 1; //TODO 60
-    static final long MILLI_TO_SEC = 1000L;
     static int screenTimeSumMinutes = 0;
     static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
+    static final int SEC_IN_MINUTE = 1; // TODO 60
+    static final long MILLI_TO_SEC = 1000L;
 
-    public static void main(String[] args) throws InterruptedException, IOException {
+    // private int minutes = -1; // Minute amount between each session
+    // private boolean minutesInputMissing = true; // Did the program start without
+    // minutes as a flag
+    private float volume = 0; // Default volume level
+    private boolean notification = true; // Get attention with User notification tray
+
+    public void run(String[] args) throws InterruptedException, IOException {
         // Required variables
         String folderName = "jingles"; // Folder to play jingles from
         String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
-        float volume = 0; // Default volume level
-        int minutes = -1; // Minute amount between each session
-        boolean minutesInputMissing = true; // Did the program start without minutes as a flag
-        boolean notification = true; // Get attention with User notification tray
-
+        Timer timer = new Timer();
         // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
         initJingles(files, folderName);
-        
-        // Parse flags
-        for (String flag : args) {
-            if (isNumber(flag)) {
-                minutes = Integer.parseInt(flag);
-                if (minutes < 0)
-                    minutes = -minutes;
-                minutesInputMissing = false;
-                continue;
-            }
 
-            // If the following flags don't match the "-char" pattern, continue
-            if (flag.length() != 2)
-                continue;
-            if (flag.charAt(0) != '-')
-                continue;
-
-            switch (flag.charAt(1)) {
-                case 'L' -> volume -= 20;
-                case 'l' -> volume -= 10;
-            }
-        }
+        timer.parseFlags(args);
 
         // If input in flags, skip- else print info and get user input
-        if (minutesInputMissing)
+        if (timer.minutesInputMissing)
             printInfo();
 
         // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
         try {
-            while (minutesInputMissing) {
+            while (timer.minutesInputMissing) {
                 String input = in.nextLine();
                 boolean skipParse = false;
                 if (input.toLowerCase().contains("lower")) {
@@ -93,20 +75,17 @@ public class Main {
                 }
                 if (skipParse)
                     continue;
-                try {
-                    minutes = Integer.parseInt(input);
-                    if (minutes < 0)
-                        minutes = -minutes;
-                    minutesInputMissing = false;
-                } catch (Exception e) {
+                if (isNumber(input)) {
+                    timer.addedMinutes(Integer.parseInt(input));
+                } else {
                     prettyPrint("Enter a valid number \\ command");
                     // Continue loop
                 }
             }
 
             // Print warning if entered a large amount
-            if (minutes > 60) {
-                prettyPrint("You have entered more than an hour (" + minutes
+            if (timer.getMinutes() > 60) {
+                prettyPrint("You have entered more than an hour (" + timer.getMinutes()
                         + " min), are you sure? press enter to continue");
                 listenForInput(in);
             }
@@ -124,7 +103,7 @@ public class Main {
             // 3 wait for enter
             while (true) {
                 consoleClear();
-                countdown(minutes, textFileName);
+                countdown(timer.getMinutes(), textFileName);
 
                 // Countdown over
                 notifier.notifyUser();
@@ -134,7 +113,6 @@ public class Main {
                 System.out.println("Stopped at:");
                 System.out.println(Calendar.getInstance().getTime());
                 System.out.println("Overall Screen Time: " + getScreenTimeSumString());
-                System.out.println("Press m to modify time");
                 System.out.println("Press enter to restart");
 
                 // Awaiting user
@@ -144,6 +122,52 @@ public class Main {
         } finally {
             if (in != null) {
                 in.close();
+            }
+        }
+    }
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+        Main appInstance = new Main();
+        appInstance.run(args);
+    }
+
+    private class Timer {
+        protected boolean minutesInputMissing = true; // Did the program start without minutes as a flag
+        private int minutes = -1; // Minute amount between each session
+        
+        public void setMinutes(int minutes) {
+            if (minutes < 0)
+                minutes = -minutes;
+            this.minutes = minutes;
+        }
+
+        public int getMinutes() {
+            return this.minutes;
+        }
+
+        public void addedMinutes(int minutes) {
+            setMinutes(minutes);
+            minutesInputMissing = false;
+        }
+
+        public void parseFlags(String[] flags) {
+            // Parse flags
+            for (String flag : flags) {
+                if (isNumber(flag)) {
+                    this.addedMinutes(Integer.parseInt(flag));
+                    continue;
+                }
+
+                // If the following flags don't match the "-char" pattern, continue
+                if (flag.length() != 2)
+                    continue;
+                if (flag.charAt(0) != '-')
+                    continue;
+
+                switch (flag.charAt(1)) {
+                    case 'L' -> volume -= 20;
+                    case 'l' -> volume -= 10;
+                }
             }
         }
     }
@@ -245,8 +269,7 @@ public class Main {
         return true;
     }
 
-    private static void flush() throws IOException
-    {
+    private static void flush() throws IOException {
         System.in.read(new byte[System.in.available()]);
     }
 
@@ -272,11 +295,11 @@ public class Main {
         System.in.read(new byte[2]); // Enter
         // String userInput = sc.next();
         // if(userInput.isEmpty()){
-        //     return;
+        // return;
         // }
         // switch(userInput){
-        //     case "m":
-        //         System.out.println("modified");
+        // case "m":
+        // System.out.println("modified");
         // }
         System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
     }
