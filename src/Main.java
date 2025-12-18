@@ -26,7 +26,6 @@ public class Main {
     static final int SEC_IN_MINUTE = 1; // TODO 60
     static final long MILLI_TO_SEC = 1000L;
 
-
     private float volume = 0; // Default volume level
     private boolean notification = true; // Get attention with User notification tray
 
@@ -35,11 +34,12 @@ public class Main {
         String folderName = "jingles"; // Folder to play jingles from
         String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
         Timer timer = new Timer();
+        
         // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
         initJingles(files, folderName);
 
-        timer.parseFlags(args);
+        parseFlags(args, timer);
 
         // If input in flags, skip- else print info and get user input
         if (timer.minutesInputMissing)
@@ -148,25 +148,6 @@ public class Main {
             minutesInputMissing = false;
         }
 
-        public void parseFlags(String[] flags) {
-            for (String flag : flags) {
-                if (isNumber(flag)) {
-                    this.addedMinutes(Integer.parseInt(flag));
-                    continue;
-                }
-
-                // If the following flags don't match the "-char" pattern, continue
-                if (flag.length() != 2)
-                    continue;
-                if (flag.charAt(0) != '-')
-                    continue;
-
-                switch (flag.charAt(1)) {
-                    case 'L' -> volume -= 20;
-                    case 'l' -> volume -= 10;
-                }
-            }
-        }
     }
 
     // general helpers
@@ -177,6 +158,26 @@ public class Main {
             return false;
         }
         return true;
+    }
+
+    public void parseFlags(String[] flags, Timer timer) {
+        for (String flag : flags) {
+            if (isNumber(flag)) {
+                timer.addedMinutes(Integer.parseInt(flag));
+                continue;
+            }
+
+            // If the following flags don't match the "-char" pattern, continue
+            if (flag.length() != 2)
+                continue;
+            if (flag.charAt(0) != '-')
+                continue;
+
+            switch (flag.charAt(1)) {
+                case 'L' -> volume -= 20;
+                case 'l' -> volume -= 10;
+            }
+        }
     }
 
     private static void countdown(int minutes, String filename) throws InterruptedException {
