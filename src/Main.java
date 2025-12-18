@@ -34,7 +34,7 @@ public class Main {
         String folderName = "jingles"; // Folder to play jingles from
         String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
         Timer timer = new Timer();
-        
+
         // Init jingle list to play in the end of a session
         ArrayList<String> files = new ArrayList<>();
         initJingles(files, folderName);
@@ -85,7 +85,7 @@ public class Main {
             if (timer.getMinutes() > 60) {
                 prettyPrint("You have entered more than an hour (" + timer.getMinutes()
                         + " min), are you sure? press enter to continue");
-                listenForInput(in);
+                listenForInput(in, timer);
             }
 
             // Try to read from file accumulated minutes
@@ -111,10 +111,11 @@ public class Main {
                 System.out.println("Stopped at:");
                 System.out.println(Calendar.getInstance().getTime());
                 System.out.println("Overall Screen Time: " + getScreenTimeSumString());
-                System.out.println("Press enter to restart");
+                System.out.println("Put a number to modify time");
+                System.out.println("Otherwise, press enter to restart");
 
                 // Awaiting user
-                listenForInput(in);
+                listenForInput(in, timer);
                 notifier.notifyRemove();
             }
         } finally {
@@ -248,17 +249,16 @@ public class Main {
         }
     }
 
-    private static void listenForInput(Scanner sc) throws IOException {
-        System.in.read(new byte[2]); // Enter
-        // String userInput = sc.next();
-        // if(userInput.isEmpty()){
-        // return;
-        // }
-        // switch(userInput){
-        // case "m":
-        // System.out.println("modified");
-        // }
-        System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
+    private static void listenForInput(Scanner sc, Timer timer) throws IOException {
+        String userInput = sc.nextLine();
+        while (!userInput.trim().isEmpty()) {
+            if (isNumber(userInput)) {
+                timer.setMinutes(Integer.parseInt(userInput));
+                System.out.println("The timer is now set at " + timer.getMinutes() + " min");
+                System.out.println("Press enter to continue");
+            }
+            userInput = sc.nextLine();
+        }
     }
 
     // printing helpers
