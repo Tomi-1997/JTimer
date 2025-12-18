@@ -26,9 +26,7 @@ public class Main {
     static final int SEC_IN_MINUTE = 1; // TODO 60
     static final long MILLI_TO_SEC = 1000L;
 
-    // private int minutes = -1; // Minute amount between each session
-    // private boolean minutesInputMissing = true; // Did the program start without
-    // minutes as a flag
+
     private float volume = 0; // Default volume level
     private boolean notification = true; // Get attention with User notification tray
 
@@ -134,8 +132,8 @@ public class Main {
     private class Timer {
         protected boolean minutesInputMissing = true; // Did the program start without minutes as a flag
         private int minutes = -1; // Minute amount between each session
-        
-        public void setMinutes(int minutes) {
+
+        private void setMinutes(int minutes) {
             if (minutes < 0)
                 minutes = -minutes;
             this.minutes = minutes;
@@ -151,7 +149,6 @@ public class Main {
         }
 
         public void parseFlags(String[] flags) {
-            // Parse flags
             for (String flag : flags) {
                 if (isNumber(flag)) {
                     this.addedMinutes(Integer.parseInt(flag));
@@ -172,6 +169,41 @@ public class Main {
         }
     }
 
+    // general helpers
+    private static boolean isNumber(String flag) {
+        try {
+            Integer.parseInt(flag);
+        } catch (Exception e) {
+            return false;
+        }
+        return true;
+    }
+
+    private static void countdown(int minutes, String filename) throws InterruptedException {
+        for (int i = minutes; i > 0; i--) {
+            System.out.println(i + " minutes left");
+            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
+            screenTimeSumMinutes++;
+            writeLogFile(filename, screenTimeSumMinutes);
+        }
+    }
+
+    private static String getScreenTimeSumString() {
+        int screenTime = screenTimeSumMinutes;
+        int hours = 0, minutes;
+        String ans = "";
+        while (screenTime >= 60) {
+            screenTime = screenTime - 60;
+            hours++;
+        }
+        minutes = screenTime;
+        ans += hours > 9 ? hours : "0" + hours;
+        ans += ":";
+        ans += minutes > 9 ? minutes : "0" + minutes;
+        return ans;
+    }
+
+    // log helpers
     private static void parseLogFile(String filename) {
         Path file = Paths.get(filename);
         try {
@@ -201,21 +233,56 @@ public class Main {
         }
     }
 
-    private static String getScreenTimeSumString() {
-        int screenTime = screenTimeSumMinutes;
-        int hours = 0, minutes;
-        String ans = "";
-        while (screenTime >= 60) {
-            screenTime = screenTime - 60;
-            hours++;
-        }
-        minutes = screenTime;
-        ans += hours > 9 ? hours : "0" + hours;
-        ans += ":";
-        ans += minutes > 9 ? minutes : "0" + minutes;
-        return ans;
+    // console helpers
+    private static void flush() throws IOException {
+        System.in.read(new byte[System.in.available()]);
     }
 
+    private static void consoleClear() throws IOException, InterruptedException {
+        final String os = System.getProperty("os.name");
+        if (os.toLowerCase().contains("windows")) {
+            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        } else {
+            new ProcessBuilder("clear").inheritIO().start().waitFor();
+        }
+    }
+
+    private static void listenForInput(Scanner sc) throws IOException {
+        System.in.read(new byte[2]); // Enter
+        // String userInput = sc.next();
+        // if(userInput.isEmpty()){
+        // return;
+        // }
+        // switch(userInput){
+        // case "m":
+        // System.out.println("modified");
+        // }
+        System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
+    }
+
+    // printing helpers
+    private static void printInfo() {
+        try (InputStream is = Main.class.getResourceAsStream("info.txt")) {
+            assert is != null;
+            try (Scanner in = new Scanner(is)) {
+                while (in.hasNext())
+                    prettyPrint(in.nextLine());
+            }
+        } catch (Exception e) {
+            // e.printStackTrace();
+            System.out.println("Could not open info file, enter the number of minutes to begin");
+        }
+    }
+
+    private static void prettyPrint(String toPrint) throws InterruptedException {
+        for (int i = 0; i < toPrint.length(); i++) {
+            System.out.print(toPrint.charAt(i));
+            Thread.sleep(2);
+        }
+        System.out.println();
+    }
+
+    // audio helpers
     private static void initJingles(ArrayList<String> files, String filename) throws IOException {
         /* Ran as a JAR, add all files that end with .wav */
         initJinglesJAR(files);
@@ -245,71 +312,6 @@ public class Main {
             }
 
         }
-    }
-
-    private static void printInfo() {
-        try (InputStream is = Main.class.getResourceAsStream("info.txt")) {
-            assert is != null;
-            try (Scanner in = new Scanner(is)) {
-                while (in.hasNext())
-                    prettyPrint(in.nextLine());
-            }
-        } catch (Exception e) {
-            // e.printStackTrace();
-            System.out.println("Could not open info file, enter the number of minutes to begin");
-        }
-    }
-
-    private static boolean isNumber(String flag) {
-        try {
-            Integer.parseInt(flag);
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
-
-    private static void flush() throws IOException {
-        System.in.read(new byte[System.in.available()]);
-    }
-
-    private static void consoleClear() throws IOException, InterruptedException {
-        final String os = System.getProperty("os.name");
-        if (os.toLowerCase().contains("windows")) {
-            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-        } else {
-            new ProcessBuilder("clear").inheritIO().start().waitFor();
-        }
-    }
-
-    private static void countdown(int minutes, String filename) throws InterruptedException {
-        for (int i = minutes; i > 0; i--) {
-            System.out.println(i + " minutes left");
-            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
-            screenTimeSumMinutes++;
-            writeLogFile(filename, screenTimeSumMinutes);
-        }
-    }
-
-    private static void listenForInput(Scanner sc) throws IOException {
-        System.in.read(new byte[2]); // Enter
-        // String userInput = sc.next();
-        // if(userInput.isEmpty()){
-        // return;
-        // }
-        // switch(userInput){
-        // case "m":
-        // System.out.println("modified");
-        // }
-        System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
-    }
-
-    private static void prettyPrint(String toPrint) throws InterruptedException {
-        for (int i = 0; i < toPrint.length(); i++) {
-            System.out.print(toPrint.charAt(i));
-            Thread.sleep(2);
-        }
-        System.out.println();
     }
 
     private static void playRandom(ArrayList<String> files, float volume) {
