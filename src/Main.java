@@ -13,8 +13,9 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-//TODO add overall break time
-// TODO add change time flag
+//TODO modify over hour warning
+// TODO add planning option
+// TODO seperate the run method to parsing and main loop
 public class Main {
     /*
      * Jingles from pixabay.com,
@@ -28,58 +29,43 @@ public class Main {
 
     private float volume = 0; // Default volume level
     private boolean notification = true; // Get attention with User notification tray
+    private boolean sessionPlan = false;
+
+    // audio files
+    private ArrayList<String> files;
+    private String folderName = "jingles"; // Folder to play jingles from
+    private String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
+
+    private Timer timer;
+
+    public static void main(String[] args) throws InterruptedException, IOException {
+        Main appInstance = new Main();
+        appInstance.init();
+        appInstance.run(args);
+    }
+
+    public Main() {
+        this.files = new ArrayList<>();
+        this.timer = new Timer();
+    }
+
+    // main class methods
+    public void init() throws IOException {
+        initJingles(this.files, this.folderName);
+    }
 
     public void run(String[] args) throws InterruptedException, IOException {
-        // Required variables
-        String folderName = "jingles"; // Folder to play jingles from
-        String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
-        Timer timer = new Timer();
-
-        // Init jingle list to play in the end of a session
-        ArrayList<String> files = new ArrayList<>();
-        initJingles(files, folderName);
-
-        parseFlags(args, timer);
+        parseFlags(args);
 
         // If input in flags, skip- else print info and get user input
-        if (timer.minutesInputMissing)
+        if (this.timer.minutesInputMissing || !sessionPlan)
             printInfo();
 
         // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
         try {
-            while (timer.minutesInputMissing) {
-                String input = in.nextLine();
-                boolean skipParse = false;
-                if (input.toLowerCase().contains("lower")) {
-                    prettyPrint("Lowered volume");
-                    volume -= 10;
-                    skipParse = true;
-                }
-                if (input.toLowerCase().contains("undo")) {
-                    prettyPrint("Undid lowering");
-                    volume = Math.min(0, volume + 10);
-                    skipParse = true;
-                }
-                if (input.toLowerCase().contains("test")) {
-                    prettyPrint("Playing ");
-                    playRandom(files, volume);
-                    skipParse = true;
-                }
-                if (input.toLowerCase().contains("notify")) {
-                    notification = !notification;
-                    prettyPrint("Notification Active: " + notification);
-                    skipParse = true;
-                }
-                if (skipParse)
-                    continue;
-                if (isNumber(input)) {
-                    timer.addedMinutes(Integer.parseInt(input));
-                } else {
-                    prettyPrint("Enter a valid number \\ command");
-                    // Continue loop
-                }
-            }
+
+            parseCommands(in);
 
             // Print warning if entered a large amount
             if (timer.getMinutes() > 60) {
@@ -101,7 +87,7 @@ public class Main {
             // 3 wait for enter
             while (true) {
                 consoleClear();
-                countdown(timer.getMinutes(), textFileName);
+                countdown();
 
                 // Countdown over
                 notifier.notifyUser();
@@ -125,9 +111,69 @@ public class Main {
         }
     }
 
-    public static void main(String[] args) throws InterruptedException, IOException {
-        Main appInstance = new Main();
-        appInstance.run(args);
+    private void parseFlags(String[] flags) {
+        for (String flag : flags) {
+            if (isNumber(flag)) {
+                this.timer.addedMinutes(Integer.parseInt(flag));
+                continue;
+            }
+
+            // If the following flags don't match the "-char" pattern, continue
+            if (flag.length() != 2)
+                continue;
+            if (flag.charAt(0) != '-')
+                continue;
+
+            switch (flag.charAt(1)) {
+                case 'L' -> volume -= 20;
+                case 'l' -> volume -= 10;
+            }
+        }
+    }
+
+    private void countdown() throws InterruptedException {
+        int minutes = this.timer.getMinutes();
+        for (int i = minutes; i > 0; i--) {
+            System.out.println(i + " minutes left");
+            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
+            screenTimeSumMinutes++;
+            writeLogFile(this.textFileName, screenTimeSumMinutes);
+        }
+    }
+
+    private void parseCommands(Scanner in) throws InterruptedException {
+        while (this.timer.minutesInputMissing) {
+            String input = in.nextLine();
+            boolean skipParse = false;
+            if (input.toLowerCase().contains("lower")) {
+                prettyPrint("Lowered volume");
+                volume -= 10;
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("undo")) {
+                prettyPrint("Undid lowering");
+                volume = Math.min(0, volume + 10);
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("test")) {
+                prettyPrint("Playing ");
+                playRandom(files, volume);
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("notify")) {
+                notification = !notification;
+                prettyPrint("Notification Active: " + notification);
+                skipParse = true;
+            }
+            if (skipParse)
+                continue;
+            if (isNumber(input)) {
+                this.timer.addedMinutes(Integer.parseInt(input));
+            } else {
+                prettyPrint("Enter a valid number \\ command");
+                // Continue loop
+            }
+        }
     }
 
     private class Timer {
@@ -159,35 +205,6 @@ public class Main {
             return false;
         }
         return true;
-    }
-
-    public void parseFlags(String[] flags, Timer timer) {
-        for (String flag : flags) {
-            if (isNumber(flag)) {
-                timer.addedMinutes(Integer.parseInt(flag));
-                continue;
-            }
-
-            // If the following flags don't match the "-char" pattern, continue
-            if (flag.length() != 2)
-                continue;
-            if (flag.charAt(0) != '-')
-                continue;
-
-            switch (flag.charAt(1)) {
-                case 'L' -> volume -= 20;
-                case 'l' -> volume -= 10;
-            }
-        }
-    }
-
-    private static void countdown(int minutes, String filename) throws InterruptedException {
-        for (int i = minutes; i > 0; i--) {
-            System.out.println(i + " minutes left");
-            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
-            screenTimeSumMinutes++;
-            writeLogFile(filename, screenTimeSumMinutes);
-        }
     }
 
     private static String getScreenTimeSumString() {
@@ -284,6 +301,9 @@ public class Main {
     }
 
     // audio helpers
+    /**
+     * Init jingle list to play in the end of a session
+     */
     private static void initJingles(ArrayList<String> files, String filename) throws IOException {
         /* Ran as a JAR, add all files that end with .wav */
         initJinglesJAR(files);
