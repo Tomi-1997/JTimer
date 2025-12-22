@@ -29,7 +29,6 @@ public class Main {
 
     private float volume = 0; // Default volume level
     private boolean notification = true; // Get attention with User notification tray
-    private boolean sessionPlan = false;
 
     // audio files
     private ArrayList<String> files;
@@ -37,6 +36,11 @@ public class Main {
     private String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
 
     private Timer timer;
+    private enum SessionType{
+        Normal,
+        Planned
+    }
+    private SessionType currSessionType;
 
     public static void main(String[] args) throws InterruptedException, IOException {
         Main appInstance = new Main();
@@ -58,28 +62,40 @@ public class Main {
         parseFlags(args);
 
         // If input in flags, skip- else print info and get user input
-        if (this.timer.minutesInputMissing || !sessionPlan)
+        if (this.timer.minutesInputMissing)
             printInfo();
 
         // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
         try {
-
             parseCommands(in);
-
-            // Print warning if entered a large amount
-            if (timer.getMinutes() > 60) {
-                prettyPrint("You have entered more than an hour (" + timer.getMinutes()
-                        + " min), are you sure? press enter to continue");
-                listenForInput(in, timer);
-            }
-
             // Try to read from file accumulated minutes
             // If earlier date, reset
             parseLogFile(textFileName);
 
             // Notification when it is time to rest
             Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
+
+
+            if (currSessionType == SessionType.Normal){
+                runNormalSession(in, notifier);
+            }
+        
+        } finally {
+            if (in != null) {
+                in.close();
+            }
+        }
+    }
+
+    private void runNormalSession(Scanner in, Notifier notifier) throws InterruptedException, IOException {
+            // Print warning if entered a large amount
+            if (timer.getMinutes() > 60) {
+                prettyPrint("--WARNING: the session is over an hour (" + timer.getMinutes()
+                        + " min)");
+                prettyPrint("Insert a number to change time, otherwise press enter to continue");        
+                listenForInput(in, timer);
+            }
 
             // Main loop -
             // 1 print to console each minute
@@ -104,17 +120,13 @@ public class Main {
                 listenForInput(in, timer);
                 notifier.notifyRemove();
             }
-        } finally {
-            if (in != null) {
-                in.close();
-            }
-        }
     }
 
     private void parseFlags(String[] flags) {
         for (String flag : flags) {
             if (isNumber(flag)) {
                 this.timer.addedMinutes(Integer.parseInt(flag));
+                currSessionType = SessionType.Normal;
                 continue;
             }
 
@@ -127,6 +139,9 @@ public class Main {
             switch (flag.charAt(1)) {
                 case 'L' -> volume -= 20;
                 case 'l' -> volume -= 10;
+                case 'p' -> {
+                    currSessionType = SessionType.Planned;
+                }
             }
         }
     }
@@ -169,6 +184,7 @@ public class Main {
                 continue;
             if (isNumber(input)) {
                 this.timer.addedMinutes(Integer.parseInt(input));
+                currSessionType = SessionType.Normal;
             } else {
                 prettyPrint("Enter a valid number \\ command");
                 // Continue loop
@@ -272,6 +288,9 @@ public class Main {
             if (isNumber(userInput)) {
                 timer.setMinutes(Integer.parseInt(userInput));
                 System.out.println("The timer is now set at " + timer.getMinutes() + " min");
+                if (timer.getMinutes()> 60){
+                    System.out.println("--WARNING: the session is over an hour");
+                }
                 System.out.println("Press enter to continue");
             }
             userInput = sc.nextLine();
