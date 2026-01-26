@@ -1,0 +1,17 @@
+{
+    "Repeat": true,
+    "TaskList": [
+        {
+            "name": "Task 1",
+            "time": 10
+        },
+        {
+            "name": "Task 2",
+            "time": 10
+        },
+        {
+            "name": "Task 3",
+            "time": 10
+        }
+    ]
+}

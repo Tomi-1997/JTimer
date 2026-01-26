@@ -4,19 +4,16 @@ import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Before;
 import org.junit.Test;
 
 public class TaskCollectionTest {
     // tests tasks and the collection behaviour
-    String taskMission = "Mission";
-    int taskTime = 10;
-    Task basicTask = new Task(taskMission, taskTime);
-    TaskCollection collection = new TaskCollection();
+    private TaskCollection collection;
 
-    @Test
-    public void testTask(){
-        assertEquals("Task time should be equal", taskTime, basicTask.getTime());
-        assertEquals("Task missions should be equal",taskMission, basicTask.getMission()); 
+    @Before
+    public void setUp() {
+        collection = new TaskCollection();
     }
     
     @Test
@@ -27,18 +24,18 @@ public class TaskCollectionTest {
 
     @Test
     public void testTaskAddition() {
-        collection.addNewTask(taskMission, taskTime);
+        collection.addNewTask("mission", 10);
         assertEquals("Collection should have one task",1,collection.getSize());
-        Task temp = collection.getTaskAt(0);
-        assertEquals("Task times should be same",taskTime, temp.getTime());
-        assertEquals("Task mission should be same",taskMission, temp.getMission());
+        TaskCollection.Task temp = collection.getTaskAt(0);
+        assertEquals("Task times should be same",10, temp.time());
+        assertEquals("Task mission should be same","mission", temp.name());
     }
 
     @Test
     public void testGetTaskAt() {
-        Task temp = collection.getTaskAt(0);
+        TaskCollection.Task temp = collection.getTaskAt(0);
         assertNull("On empty collection, should get null",temp);
-        collection.addNewTask(taskMission, taskTime);
+        collection.addNewTask("mission", 10);
         temp = collection.getTaskAt(0);
         assertNotNull("Must have an element at this point", temp);
         temp = collection.getTaskAt(-1);
@@ -54,5 +51,41 @@ public class TaskCollectionTest {
         assertTrue("Collection repeatition is set on true",collection.isRepeat());
         collection.setRepeatition(false);
         assertFalse("Collection repeatition is set on false",collection.isRepeat());
+    }
+
+    @Test
+    public void testProcessJson(){
+        String json = "{\"Repeat\": true,\"TaskList\": [" + //
+                        "        {\"name\": \"Task 1\",\"time\": 10}," + //
+                        "        {\"name\": \"Task 2\",\"time\": 10}," + //
+                        "        {\"name\": \"Task 3\",\"time\": 10}" + //
+                        "]}";
+        TaskCollection.Task temp = collection.getTaskAt(0);                        
+        assertNull("Empty collection, task should be null",temp);                        
+        collection.proccessJson(json);
+        assertEquals("Supposed to be three tasks now",3, collection.getSize());
+        assertTrue("Json is set to repeat", collection.repeat);
+        String taskname;
+        for (int i = 0; i < collection.getSize(); i++){
+            temp = collection.getTaskAt(i);
+            taskname = "Task " + (i+1);
+            assertEquals(taskname, temp.name());
+            assertEquals(10, temp.time());
+        }
+    }
+
+    @Test
+    public void CreateFromFile(){
+        collection = new TaskCollection("simplePlan.json");                      
+        assertEquals("Supposed to be three tasks now",3, collection.getSize());
+        assertTrue("Json is set to repeat", collection.repeat);
+        TaskCollection.Task temp;       
+        String taskname;
+        for (int i = 0; i < collection.getSize(); i++){
+            temp = collection.getTaskAt(i);
+            taskname = "Task " + (i+1);
+            assertEquals(taskname, temp.name());
+            assertEquals(10, temp.time());
+        }
     }
 }

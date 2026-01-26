@@ -37,8 +37,10 @@ public class Main {
 
     private Timer timer;
     private enum SessionType{
-        Normal,
-        Planned
+        Normal, // Single timer, modifiable
+        //Plan = Series of timers planned ahead
+        Plan, // Single plan to go through
+        RepeatingPlan // Plan that in the end of it will reset to its beginning
     }
     private SessionType currSessionType;
 
@@ -79,7 +81,11 @@ public class Main {
 
             if (currSessionType == SessionType.Normal){
                 runNormalSession(in, notifier);
+            } else {
+                runPlannedSession();
             }
+
+            
         
         } finally {
             if (in != null) {
@@ -88,13 +94,17 @@ public class Main {
         }
     }
 
+    private void runPlannedSession() {
+      
+    }
+
     private void runNormalSession(Scanner in, Notifier notifier) throws InterruptedException, IOException {
             // Print warning if entered a large amount
-            if (timer.getMinutes() > 60) {
-                prettyPrint("--WARNING: the session is over an hour (" + timer.getMinutes()
+            if (this.timer.getMinutes() > 60) {
+                prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
                         + " min)");
                 prettyPrint("Insert a number to change time, otherwise press enter to continue");        
-                listenForInput(in, timer);
+                listenForInput(in, this.timer);
             }
 
             // Main loop -
@@ -107,7 +117,7 @@ public class Main {
 
                 // Countdown over
                 notifier.notifyUser();
-                playRandom(files, volume);
+                playRandom(this.files, this.volume);
                 // flush(in);
                 flush();
                 System.out.println("Stopped at:");
@@ -140,7 +150,7 @@ public class Main {
                 case 'L' -> volume -= 20;
                 case 'l' -> volume -= 10;
                 case 'p' -> {
-                    currSessionType = SessionType.Planned;
+                    currSessionType = SessionType.Plan;
                 }
             }
         }
@@ -172,10 +182,15 @@ public class Main {
             }
             if (input.toLowerCase().contains("test")) {
                 prettyPrint("Playing ");
-                playRandom(files, volume);
+                playRandom(this.files, this.volume);
                 skipParse = true;
             }
             if (input.toLowerCase().contains("notify")) {
+                notification = !notification;
+                prettyPrint("Notification Active: " + notification);
+                skipParse = true;
+            }
+            if (input.toLowerCase().contains("plan")) {
                 notification = !notification;
                 prettyPrint("Notification Active: " + notification);
                 skipParse = true;
