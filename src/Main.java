@@ -13,7 +13,6 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-//TODO modify over hour warning
 // TODO add planning option
 // TODO seperate the run method to parsing and main loop
 public class Main {
