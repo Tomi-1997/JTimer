@@ -15,6 +15,7 @@ import java.util.zip.ZipInputStream;
 
 // TODO add planning option
 // TODO seperate the run method to parsing and main loop
+// TODO hashmap for argument options, hold record for each option
 public class Main {
     /*
      * Jingles from pixabay.com,
@@ -35,12 +36,15 @@ public class Main {
     private String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
 
     private Timer timer;
-    private enum SessionType{
+    private Parser parser;
+
+    private enum SessionType {
         Normal, // Single timer, modifiable
-        //Plan = Series of timers planned ahead
+        // Plan = Series of timers planned ahead
         Plan, // Single plan to go through
         RepeatingPlan // Plan that in the end of it will reset to its beginning
     }
+
     private SessionType currSessionType;
 
     public static void main(String[] args) throws InterruptedException, IOException {
@@ -52,6 +56,7 @@ public class Main {
     public Main() {
         this.files = new ArrayList<>();
         this.timer = new Timer();
+        this.parser = new Parser();
     }
 
     // main class methods
@@ -77,15 +82,12 @@ public class Main {
             // Notification when it is time to rest
             Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
 
-
-            if (currSessionType == SessionType.Normal){
+            if (currSessionType == SessionType.Normal) {
                 runNormalSession(in, notifier);
             } else {
-                runPlannedSession();
+                // runPlannedSession();
             }
 
-            
-        
         } finally {
             if (in != null) {
                 in.close();
@@ -93,42 +95,37 @@ public class Main {
         }
     }
 
-    private void runPlannedSession() {
-      
-    }
-
     private void runNormalSession(Scanner in, Notifier notifier) throws InterruptedException, IOException {
-            // Print warning if entered a large amount
-            if (this.timer.getMinutes() > 60) {
-                prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
-                        + " min)");
-                prettyPrint("Insert a number to change time, otherwise press enter to continue");        
-                listenForInput(in, this.timer);
-            }
+        // Print warning if entered a large amount
+        if (this.timer.getMinutes() > 60) {
+            prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
+                    + " min)");
+            prettyPrint("Insert a number to change time, otherwise press enter to continue");
+            listenForInput(in, this.timer);
+        }
 
-            // Main loop -
-            // 1 print to console each minute
-            // 2 play a jingle at the end
-            // 3 wait for enter
-            while (true) {
-                consoleClear();
-                countdown();
+        // Main loop -
+        // 1 print to console each minute
+        // 2 play a jingle at the end
+        // 3 wait for enter
+        while (true) {
+            consoleClear();
+            countdown();
 
-                // Countdown over
-                notifier.notifyUser();
-                playRandom(this.files, this.volume);
-                // flush(in);
-                flush();
-                System.out.println("Stopped at:");
-                System.out.println(Calendar.getInstance().getTime());
-                System.out.println("Overall Screen Time: " + getScreenTimeSumString());
-                System.out.println("Put a number to modify time");
-                System.out.println("Otherwise, press enter to restart");
+            // Countdown over
+            notifier.notifyUser();
+            playRandom(this.files, this.volume);
+            flush();
+            System.out.println("Stopped at:");
+            System.out.println(Calendar.getInstance().getTime());
+            System.out.println("Overall Screen Time: " + getScreenTimeSumString());
+            System.out.println("Put a number to modify time");
+            System.out.println("Otherwise, press enter to restart");
 
-                // Awaiting user
-                listenForInput(in, timer);
-                notifier.notifyRemove();
-            }
+            // Awaiting user
+            listenForInput(in, timer);
+            notifier.notifyRemove();
+        }
     }
 
     private void parseFlags(String[] flags) {
@@ -150,6 +147,7 @@ public class Main {
                 case 'l' -> volume -= 10;
                 case 'p' -> {
                     currSessionType = SessionType.Plan;
+
                 }
             }
         }
@@ -167,41 +165,44 @@ public class Main {
 
     private void parseCommands(Scanner in) throws InterruptedException {
         while (this.timer.minutesInputMissing) {
-            String input = in.nextLine();
-            boolean skipParse = false;
-            if (input.toLowerCase().contains("lower")) {
-                prettyPrint("Lowered volume");
-                volume -= 10;
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("undo")) {
-                prettyPrint("Undid lowering");
-                volume = Math.min(0, volume + 10);
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("test")) {
-                prettyPrint("Playing ");
-                playRandom(this.files, this.volume);
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("notify")) {
-                notification = !notification;
-                prettyPrint("Notification Active: " + notification);
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("plan")) {
-                notification = !notification;
-                prettyPrint("Notification Active: " + notification);
-                skipParse = true;
-            }
-            if (skipParse)
-                continue;
-            if (isNumber(input)) {
-                this.timer.addedMinutes(Integer.parseInt(input));
-                currSessionType = SessionType.Normal;
-            } else {
-                prettyPrint("Enter a valid number \\ command");
-                // Continue loop
+            String line = in.nextLine();
+            String input = this.parser.parseCommand(line);
+            switch (input) {
+                case "#":{
+                    this.timer.addedMinutes(Integer.parseInt(line));
+                    currSessionType = SessionType.Normal;
+                    break;
+                }
+                case "l":
+                    prettyPrint("Lowered volume");
+                    volume -= 10;
+                    break;
+                case "u": {
+                    prettyPrint("Undid lowering");
+                    volume = Math.min(0, volume + 10);
+                    break;
+                }
+                case "t": {
+                    prettyPrint("Playing");
+                    playRandom(this.files, this.volume);
+                    break;
+                }
+                case "n": {
+                    notification = !notification;
+                    prettyPrint("Notification Enabled: " + notification);
+                    break;
+                }
+                case "p":{
+                    //strip line from p/plan, then use it as a file
+                    // if missing file ask for one within
+                    break;
+                }
+                case null:
+                default: {
+                    prettyPrint("Please enter a valid command \\ number");
+                    break;
+                }
+                    
             }
         }
     }
@@ -302,7 +303,7 @@ public class Main {
             if (isNumber(userInput)) {
                 timer.setMinutes(Integer.parseInt(userInput));
                 System.out.println("The timer is now set at " + timer.getMinutes() + " min");
-                if (timer.getMinutes()> 60){
+                if (timer.getMinutes() > 60) {
                     System.out.println("--WARNING: the session is over an hour");
                 }
                 System.out.println("Press enter to continue");
