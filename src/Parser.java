@@ -1,4 +1,5 @@
 import java.util.HashMap;
+import static utils.Helpers.isNumber;
 
 public class Parser {
     public record Flag(String longArg, String desc) {
@@ -47,14 +48,5 @@ public class Parser {
             }
         }
         return null;
-    }
-
-    private static boolean isNumber(String flag) {
-        try {
-            Integer.parseInt(flag);
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
     }
 }
