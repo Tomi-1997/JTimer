@@ -13,9 +13,11 @@ import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-// TODO add planning option
-// TODO seperate the run method to parsing and main loop
-// TODO hashmap for argument options, hold record for each option
+import utils.Timer;
+import static utils.Helpers.isNumber;
+import static utils.Helpers.getScreenTimeSumString;
+
+// TODO integrate plan making
 public class Main {
     /*
      * Jingles from pixabay.com,
@@ -118,7 +120,7 @@ public class Main {
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
-            System.out.println("Overall Screen Time: " + getScreenTimeSumString());
+            System.out.println("Overall Screen Time: " + getScreenTimeSumString(screenTimeSumMinutes));
             System.out.println("Put a number to modify time");
             System.out.println("Otherwise, press enter to restart");
 
@@ -206,54 +208,7 @@ public class Main {
             }
         }
     }
-
-    private class Timer {
-        protected boolean minutesInputMissing = true; // Did the program start without minutes as a flag
-        private int minutes = -1; // Minute amount between each session
-
-        private void setMinutes(int minutes) {
-            if (minutes < 0)
-                minutes = -minutes;
-            this.minutes = minutes;
-        }
-
-        public int getMinutes() {
-            return this.minutes;
-        }
-
-        public void addedMinutes(int minutes) {
-            setMinutes(minutes);
-            minutesInputMissing = false;
-        }
-
-    }
-
-    // general helpers
-    private static boolean isNumber(String flag) {
-        try {
-            Integer.parseInt(flag);
-        } catch (Exception e) {
-            return false;
-        }
-        return true;
-    }
-
-    private static String getScreenTimeSumString() {
-        int screenTime = screenTimeSumMinutes;
-        int hours = 0, minutes;
-        String ans = "";
-        while (screenTime >= 60) {
-            screenTime = screenTime - 60;
-            hours++;
-        }
-        minutes = screenTime;
-        ans += hours > 9 ? hours : "0" + hours;
-        ans += ":";
-        ans += minutes > 9 ? minutes : "0" + minutes;
-        return ans;
-    }
-
-    // log helpers
+        // log helpers
     private static void parseLogFile(String filename) {
         Path file = Paths.get(filename);
         try {
@@ -326,7 +281,7 @@ public class Main {
         }
     }
 
-    private static void prettyPrint(String toPrint) throws InterruptedException {
+    public static void prettyPrint(String toPrint) throws InterruptedException {
         for (int i = 0; i < toPrint.length(); i++) {
             System.out.print(toPrint.charAt(i));
             Thread.sleep(2);
@@ -374,4 +329,5 @@ public class Main {
         String filename = files.get(rndIndex);
         Audio.play(filename, volume);
     }
+
 }
