@@ -1,8 +1,7 @@
 package utils;
 
 public class Helpers {
-    
-    // general helpers
+
     public static boolean isNumber(String flag) {
         try {
             Integer.parseInt(flag);
@@ -12,19 +11,11 @@ public class Helpers {
         return true;
     }
 
-    public static String getScreenTimeSumString(int screenTimeSumMinutes) {
-        int screenTime = screenTimeSumMinutes;
-        int hours = 0, minutes;
-        String ans = "";
-        while (screenTime >= 60) {
-            screenTime = screenTime - 60;
-            hours++;
+    public static void prettyPrint(String toPrint) throws InterruptedException {
+        for (int i = 0; i < toPrint.length(); i++) {
+            System.out.print(toPrint.charAt(i));
+            Thread.sleep(2);
         }
-        minutes = screenTime;
-        ans += hours > 9 ? hours : "0" + hours;
-        ans += ":";
-        ans += minutes > 9 ? minutes : "0" + minutes;
-        return ans;
+        System.out.println();
     }
-
 }

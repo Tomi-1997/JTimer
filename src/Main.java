@@ -1,12 +1,8 @@
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -15,7 +11,9 @@ import java.util.zip.ZipInputStream;
 
 import utils.Timer;
 import static utils.Helpers.isNumber;
-import static utils.Helpers.getScreenTimeSumString;
+import static utils.Helpers.prettyPrint;
+import static utils.Logger.writeLogFile;
+import static utils.Logger.parseLogFile;
 
 // TODO integrate plan making
 public class Main {
@@ -24,7 +22,7 @@ public class Main {
      * https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    static int screenTimeSumMinutes = 0;
+    // static int screenTimeSumMinutes = 0;
     static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
     static final int SEC_IN_MINUTE = 1; // TODO 60
     static final long MILLI_TO_SEC = 1000L;
@@ -79,7 +77,7 @@ public class Main {
             parseCommands(in);
             // Try to read from file accumulated minutes
             // If earlier date, reset
-            parseLogFile(textFileName);
+            parseLogFile(textFileName, this.timer);
 
             // Notification when it is time to rest
             Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
@@ -120,7 +118,7 @@ public class Main {
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
-            System.out.println("Overall Screen Time: " + getScreenTimeSumString(screenTimeSumMinutes));
+            System.out.println("Overall Screen Time: " + timer.getScreenTimeSumString());
             System.out.println("Put a number to modify time");
             System.out.println("Otherwise, press enter to restart");
 
@@ -160,8 +158,8 @@ public class Main {
         for (int i = minutes; i > 0; i--) {
             System.out.println(i + " minutes left");
             Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
-            screenTimeSumMinutes++;
-            writeLogFile(this.textFileName, screenTimeSumMinutes);
+            this.timer.updateScreenTime();
+            writeLogFile(this.textFileName, this.timer.getScreenTime());
         }
     }
 
@@ -170,7 +168,7 @@ public class Main {
             String line = in.nextLine();
             String input = this.parser.parseCommand(line);
             switch (input) {
-                case "#":{
+                case "#": {
                     this.timer.addedMinutes(Integer.parseInt(line));
                     currSessionType = SessionType.Normal;
                     break;
@@ -194,8 +192,8 @@ public class Main {
                     prettyPrint("Notification Enabled: " + notification);
                     break;
                 }
-                case "p":{
-                    //strip line from p/plan, then use it as a file
+                case "p": {
+                    // strip line from p/plan, then use it as a file
                     // if missing file ask for one within
                     break;
                 }
@@ -204,37 +202,8 @@ public class Main {
                     prettyPrint("Please enter a valid command \\ number");
                     break;
                 }
-                    
+
             }
-        }
-    }
-        // log helpers
-    private static void parseLogFile(String filename) {
-        Path file = Paths.get(filename);
-        try {
-            List<String> s = Files.readAllLines(file);
-            String fileDate = s.get(0);
-
-            // Different day, don't load data
-            if (fileDate.compareTo(currentDate) != 0) {
-                return;
-            }
-
-            // Parse accumulated minutes to int
-            screenTimeSumMinutes = Integer.parseInt(s.get(1));
-        } catch (IOException ignored) {
-
-        }
-    }
-
-    private static void writeLogFile(String filename, int minutes) {
-        try {
-            PrintWriter writer = new PrintWriter(filename, StandardCharsets.UTF_8);
-            writer.println(currentDate);
-            writer.println(minutes);
-            writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -281,19 +250,11 @@ public class Main {
         }
     }
 
-    public static void prettyPrint(String toPrint) throws InterruptedException {
-        for (int i = 0; i < toPrint.length(); i++) {
-            System.out.print(toPrint.charAt(i));
-            Thread.sleep(2);
-        }
-        System.out.println();
-    }
-
     // audio helpers
-    /**
-     * Init jingle list to play in the end of a session
-     */
     private static void initJingles(ArrayList<String> files, String filename) throws IOException {
+        /**
+         * Init jingle list to play in the end of a session
+         */
         /* Ran as a JAR, add all files that end with .wav */
         initJinglesJAR(files);
         if (files.size() > 0)
