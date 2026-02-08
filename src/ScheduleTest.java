@@ -54,27 +54,6 @@ public class ScheduleTest {
     }
 
     @Test
-    public void testProcessJson(){
-        String json = "{\"Repeat\": true,\"TaskList\": [" + //
-                        "        {\"name\": \"Task 1\",\"time\": 10}," + //
-                        "        {\"name\": \"Task 2\",\"time\": 10}," + //
-                        "        {\"name\": \"Task 3\",\"time\": 10}" + //
-                        "]}";
-        Schedule.Task temp = collection.getTaskAt(0);                        
-        assertNull("Empty collection, task should be null",temp);                        
-        collection.proccessJson(json);
-        assertEquals("Supposed to be three tasks now",3, collection.getSize());
-        assertTrue("Json is set to repeat", collection.isRepeat());
-        String taskname;
-        for (int i = 0; i < collection.getSize(); i++){
-            temp = collection.getTaskAt(i);
-            taskname = "Task " + (i+1);
-            assertEquals(taskname, temp.name());
-            assertEquals(10, temp.time());
-        }
-    }
-
-    @Test
     public void CreateFromFile(){
         collection = new Schedule("simplePlan.json");                      
         assertEquals("Supposed to be three tasks now",3, collection.getSize());

@@ -1,4 +1,5 @@
 import java.io.BufferedReader;
+import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -8,14 +9,19 @@ import org.json.JSONObject;
 
 public class Schedule {
     public record Task(String name, int time) {
+        public void info() {
+            System.out.println("Task <" + name + ">: " + time + " min");
+        }
     }
 
     private boolean repeat;
+    private String title;
     private ArrayList<Task> taskCollection;
 
     public Schedule() {
         this.taskCollection = new ArrayList<>();
         this.repeat = false; // no repeatition by default
+        this.title = "";
     }
 
     public Schedule(String filename) {
@@ -28,7 +34,8 @@ public class Schedule {
                 builder.append(line);
             }
             this.proccessJson(builder.toString());
-
+        } catch (FileNotFoundException e) {
+            System.out.println("File not found");;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -62,17 +69,26 @@ public class Schedule {
         return task;
     }
 
-    public void proccessJson(String jsonText) {
+    public void printScheduleInfo() {
+        System.out.println("Schedule " + this.title);
+        System.out.println("Repeat Enabled: " + this.repeat);
+    }
+
+    private void setTitle(String title) {
+        this.title = title;
+    }
+
+    private void proccessJson(String jsonText) {
         // process the outer object
         JSONObject base = new JSONObject(jsonText);
-        boolean repeat = base.getBoolean("Repeat");
-        this.setRepeatition(repeat);
+        this.setRepeatition(base.getBoolean("Repeat"));
+        this.setTitle(base.getString("ScheduleTitle"));
 
         // process the inner list
         JSONArray taskArray = base.getJSONArray("TaskList");
         for (int i = 0; i < taskArray.length(); i++) {
             JSONObject taskObject = taskArray.getJSONObject(i);
-            String name = taskObject.getString("name");
+            String name = taskObject.getString("TaskTitle");
             int time = taskObject.getInt("time");
             this.addNewTask(name, time);
         }
