@@ -10,7 +10,7 @@ public class Schedule {
     public record Task(String name, int time) {
     }
 
-    boolean repeat;
+    private boolean repeat;
     private ArrayList<Task> taskCollection;
 
     public Schedule() {

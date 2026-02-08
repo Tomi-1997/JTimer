@@ -64,7 +64,7 @@ public class ScheduleTest {
         assertNull("Empty collection, task should be null",temp);                        
         collection.proccessJson(json);
         assertEquals("Supposed to be three tasks now",3, collection.getSize());
-        assertTrue("Json is set to repeat", collection.repeat);
+        assertTrue("Json is set to repeat", collection.isRepeat());
         String taskname;
         for (int i = 0; i < collection.getSize(); i++){
             temp = collection.getTaskAt(i);
@@ -78,7 +78,7 @@ public class ScheduleTest {
     public void CreateFromFile(){
         collection = new Schedule("simplePlan.json");                      
         assertEquals("Supposed to be three tasks now",3, collection.getSize());
-        assertTrue("Json is set to repeat", collection.repeat);
+        assertTrue("Json is set to repeat", collection.isRepeat());
         Schedule.Task temp;       
         String taskname;
         for (int i = 0; i < collection.getSize(); i++){
