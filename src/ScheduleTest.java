@@ -7,13 +7,13 @@ import static org.junit.Assert.assertTrue;
 import org.junit.Before;
 import org.junit.Test;
 
-public class TaskCollectionTest {
+public class ScheduleTest {
     // tests tasks and the collection behaviour
-    private TaskCollection collection;
+    private Schedule collection;
 
     @Before
     public void setUp() {
-        collection = new TaskCollection();
+        collection = new Schedule();
     }
     
     @Test
@@ -26,14 +26,14 @@ public class TaskCollectionTest {
     public void testTaskAddition() {
         collection.addNewTask("mission", 10);
         assertEquals("Collection should have one task",1,collection.getSize());
-        TaskCollection.Task temp = collection.getTaskAt(0);
+        Schedule.Task temp = collection.getTaskAt(0);
         assertEquals("Task times should be same",10, temp.time());
         assertEquals("Task mission should be same","mission", temp.name());
     }
 
     @Test
     public void testGetTaskAt() {
-        TaskCollection.Task temp = collection.getTaskAt(0);
+        Schedule.Task temp = collection.getTaskAt(0);
         assertNull("On empty collection, should get null",temp);
         collection.addNewTask("mission", 10);
         temp = collection.getTaskAt(0);
@@ -60,7 +60,7 @@ public class TaskCollectionTest {
                         "        {\"name\": \"Task 2\",\"time\": 10}," + //
                         "        {\"name\": \"Task 3\",\"time\": 10}" + //
                         "]}";
-        TaskCollection.Task temp = collection.getTaskAt(0);                        
+        Schedule.Task temp = collection.getTaskAt(0);                        
         assertNull("Empty collection, task should be null",temp);                        
         collection.proccessJson(json);
         assertEquals("Supposed to be three tasks now",3, collection.getSize());
@@ -76,10 +76,10 @@ public class TaskCollectionTest {
 
     @Test
     public void CreateFromFile(){
-        collection = new TaskCollection("simplePlan.json");                      
+        collection = new Schedule("simplePlan.json");                      
         assertEquals("Supposed to be three tasks now",3, collection.getSize());
         assertTrue("Json is set to repeat", collection.repeat);
-        TaskCollection.Task temp;       
+        Schedule.Task temp;       
         String taskname;
         for (int i = 0; i < collection.getSize(); i++){
             temp = collection.getTaskAt(i);

@@ -6,16 +6,32 @@ import java.util.ArrayList;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
-public class TaskCollection {
+public class Schedule {
     public record Task(String name, int time) {
     }
 
     boolean repeat;
     private ArrayList<Task> taskCollection;
 
-    public TaskCollection() {
+    public Schedule() {
         this.taskCollection = new ArrayList<>();
         this.repeat = false; // no repeatition by default
+    }
+
+    public Schedule(String filename) {
+        this();
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
+            StringBuilder builder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line);
+            }
+            this.proccessJson(builder.toString());
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void setRepeatition(boolean repeat) {
@@ -44,22 +60,6 @@ public class TaskCollection {
         }
         Task task = this.taskCollection.get(index);
         return task;
-    }
-    
-    public TaskCollection (String filename) {
-        this();
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(filename))) {
-            StringBuilder builder = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                builder.append(line);
-            }
-            this.proccessJson(builder.toString());
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
     }
 
     public void proccessJson(String jsonText) {
