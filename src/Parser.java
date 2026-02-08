@@ -55,7 +55,23 @@ public class Parser {
             if (value.longArg.equals(arg)) {
                 return key;
             }
+            //two part argumemt
+            if (arg.split(" ", 2)[0].equals(value.longArg)){
+                return key;
+            }
         }
         return null;
+    }
+
+    public String parseFilename(String arg){
+        String[] parse = arg.split(" ", 2);
+        if (parse.length < 2){
+            return null;
+        }
+        String ans = parse[1];
+        if(ans.isBlank()){
+            return null;
+        }
+        return parse[1];
     }
 }
