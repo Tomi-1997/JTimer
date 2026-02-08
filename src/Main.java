@@ -10,8 +10,10 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 import utils.Timer;
-import static utils.Helpers.isNumber;
+import utils.Helpers.SessionType;
 import static utils.Helpers.prettyPrint;
+import static utils.Helpers.listenForInput;
+
 import static utils.Logger.writeLogFile;
 import static utils.Logger.parseLogFile;
 
@@ -37,13 +39,7 @@ public class Main {
 
     private Timer timer;
     private Parser parser;
-
-    private enum SessionType {
-        Normal, // Single timer, modifiable
-        // Plan = Series of timers planned ahead
-        Plan, // Single plan to go through
-        RepeatingPlan // Plan that in the end of it will reset to its beginning
-    }
+    private Schedule schedule;
 
     private SessionType currSessionType;
 
@@ -57,6 +53,7 @@ public class Main {
         this.files = new ArrayList<>();
         this.timer = new Timer();
         this.parser = new Parser();
+        this.schedule = null;
     }
 
     // main class methods
@@ -85,7 +82,7 @@ public class Main {
             if (currSessionType == SessionType.Normal) {
                 runNormalSession(in, notifier);
             } else {
-                // runPlannedSession();
+                runSchedule(in, notifier);
             }
 
         } finally {
@@ -95,13 +92,54 @@ public class Main {
         }
     }
 
+    private void runSchedule(Scanner in, Notifier notifier) throws InterruptedException, IOException {
+        if (this.schedule == null) {
+            System.out.println("Schedule undefined");
+            return;
+        }
+        if (this.schedule.getSize() < 1) {
+            System.out.println("Schedule is empty");
+            return;
+        }
+        int taskIndex = 0;
+        int numOfTasks = this.schedule.getSize();
+        while (taskIndex < numOfTasks) {
+            consoleClear();
+            // print schedule details
+            this.schedule.printScheduleInfo();
+            System.out.println("Running task " + (taskIndex+1) + "/" + numOfTasks);
+
+            // print task details
+            Schedule.Task currTask = this.schedule.getTaskAt(taskIndex);
+            currTask.info();
+            this.timer.setMinutes(currTask.time());
+
+            countdown();
+
+            // Countdown over
+            notifier.notifyUser();
+            playRandom(this.files, this.volume);
+            flush();
+            System.out.println("Stopped at:");
+            System.out.println(Calendar.getInstance().getTime());
+            System.out.println("Overall Screen Time: " + timer.getScreenTimeSumString());
+            System.out.println("Press enter to continue");
+
+            // Awaiting user
+            listenForInput(in, timer, currSessionType);
+            notifier.notifyRemove();
+
+            taskIndex = schedule.isRepeat() ? (taskIndex + 1) % numOfTasks : (taskIndex + 1);
+        }
+    }
+
     private void runNormalSession(Scanner in, Notifier notifier) throws InterruptedException, IOException {
         // Print warning if entered a large amount
         if (this.timer.getMinutes() > 60) {
             prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
                     + " min)");
             prettyPrint("Insert a number to change time, otherwise press enter to continue");
-            listenForInput(in, this.timer);
+            listenForInput(in, this.timer, currSessionType);
         }
 
         // Main loop -
@@ -123,31 +161,43 @@ public class Main {
             System.out.println("Otherwise, press enter to restart");
 
             // Awaiting user
-            listenForInput(in, timer);
+            listenForInput(in, timer, currSessionType);
             notifier.notifyRemove();
         }
     }
 
     private void parseFlags(String[] flags) {
-        for (String flag : flags) {
-            if (isNumber(flag)) {
-                this.timer.addedMinutes(Integer.parseInt(flag));
-                currSessionType = SessionType.Normal;
-                continue;
-            }
-
-            // If the following flags don't match the "-char" pattern, continue
-            if (flag.length() != 2)
-                continue;
-            if (flag.charAt(0) != '-')
-                continue;
-
-            switch (flag.charAt(1)) {
-                case 'L' -> volume -= 20;
-                case 'l' -> volume -= 10;
-                case 'p' -> {
-                    currSessionType = SessionType.Plan;
-
+        for (int i = 0; i < flags.length; i++) {
+            String flag = flags[i];
+            String key = parser.parseArgs(flag, true);
+            switch (key) {
+                case "#" -> {
+                    if (currSessionType == SessionType.Undefined)
+                        this.timer.addedMinutes(Integer.parseInt(flag));
+                    currSessionType = SessionType.Normal;
+                }
+                case "L" -> {
+                    volume -= 20;
+                }
+                case "l" -> {
+                    volume -= 10;
+                }
+                case "p" -> {
+                    currSessionType = SessionType.plan;
+                    String filename = flags[i + 1];
+                    schedule = new Schedule(filename);
+                }
+                case "n" -> {
+                    notification = !notification;
+                }
+                case "t" -> {
+                    playRandom(files, volume);
+                }
+                case "u" -> {
+                    continue;
+                }
+                case null, default -> {
+                    continue;
                 }
             }
         }
@@ -166,41 +216,46 @@ public class Main {
     private void parseCommands(Scanner in) throws InterruptedException {
         while (this.timer.minutesInputMissing) {
             String line = in.nextLine();
-            String input = this.parser.parseCommand(line);
+            String input = this.parser.parseArgs(line, false);
             switch (input) {
-                case "#": {
+                case "#" -> {
                     this.timer.addedMinutes(Integer.parseInt(line));
                     currSessionType = SessionType.Normal;
-                    break;
                 }
-                case "l":
+                case "l" -> {
                     prettyPrint("Lowered volume");
                     volume -= 10;
-                    break;
-                case "u": {
+                }
+
+                case "u" -> {
                     prettyPrint("Undid lowering");
                     volume = Math.min(0, volume + 10);
-                    break;
+
                 }
-                case "t": {
+                case "t" -> {
                     prettyPrint("Playing");
                     playRandom(this.files, this.volume);
-                    break;
+
                 }
-                case "n": {
+                case "n" -> {
                     notification = !notification;
-                    prettyPrint("Notification Enabled: " + notification);
-                    break;
+                    prettyPrint("Notification Enabled-> " + notification);
+
                 }
-                case "p": {
-                    // strip line from p/plan, then use it as a file
-                    // if missing file ask for one within
-                    break;
+                case "p" -> {
+                    String filename = parser.parseFilename(line);
+                    if (filename == null) {
+                        prettyPrint("--Error: Missing filename");
+                    } else {
+                        currSessionType = SessionType.plan;
+                        schedule = new Schedule(filename);
+                        this.timer.addedMinutes(0);
+                    }
+
                 }
-                case null:
-                default: {
+                case null, default -> {
                     prettyPrint("Please enter a valid command \\ number");
-                    break;
+
                 }
 
             }
@@ -218,21 +273,6 @@ public class Main {
             new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
         } else {
             new ProcessBuilder("clear").inheritIO().start().waitFor();
-        }
-    }
-
-    private static void listenForInput(Scanner sc, Timer timer) throws IOException {
-        String userInput = sc.nextLine();
-        while (!userInput.trim().isEmpty()) {
-            if (isNumber(userInput)) {
-                timer.setMinutes(Integer.parseInt(userInput));
-                System.out.println("The timer is now set at " + timer.getMinutes() + " min");
-                if (timer.getMinutes() > 60) {
-                    System.out.println("--WARNING: the session is over an hour");
-                }
-                System.out.println("Press enter to continue");
-            }
-            userInput = sc.nextLine();
         }
     }
 

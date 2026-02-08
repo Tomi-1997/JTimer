@@ -1,16 +1,17 @@
 {
     "Repeat": true,
+    "ScheduleTitle": "Example",
     "TaskList": [
         {
-            "name": "Task 1",
+            "TaskTitle": "Task 1",
             "time": 10
         },
         {
-            "name": "Task 2",
+            "TaskTitle": "Task 2",
             "time": 10
         },
         {
-            "name": "Task 3",
+            "TaskTitle": "Task 3",
             "time": 10
         }
     ]

@@ -31,7 +31,7 @@ public class Helpers {
     public static void listenForInput(Scanner sc, Timer timer, SessionType currSession) throws IOException {
         String userInput = sc.nextLine();
         boolean isInputNeeded = (currSession == SessionType.Normal);
-        while (!userInput.trim().isEmpty() && isInputNeeded) {
+        while (!userInput.isBlank() && isInputNeeded) {
             if (isNumber(userInput)) {
                 timer.setMinutes(Integer.parseInt(userInput));
                 System.out.println("The timer is now set at " + timer.getMinutes() + " min");
