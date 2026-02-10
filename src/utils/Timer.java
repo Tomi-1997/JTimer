@@ -1,11 +1,16 @@
 package utils;
 
 public class Timer {
-    public boolean minutesInputMissing = true; // Did the program start without minutes as a flag
-    private int minutes = -1; // Minute amount between each session
+    private boolean minutesInputMissing = true; // Did the program start without minutes as a flag
+    private int minutes = 0; // Minute amount between each session
     private static int screenTimeSumMinutes = 0;
+    
+    public boolean isInit(){
+        return minutesInputMissing;
+    }
 
     public void setMinutes(int minutes) {
+        initTimer();
         if (minutes < 0)
             minutes = -minutes;
         this.minutes = minutes;
@@ -15,9 +20,9 @@ public class Timer {
         return this.minutes;
     }
 
-    public void addedMinutes(int minutes) {
-        setMinutes(minutes);
-        minutesInputMissing = false;
+    public void initTimer() {
+        if (minutesInputMissing)
+            minutesInputMissing = false;
     }
 
     public int getScreenTime(){

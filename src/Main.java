@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.URL;
 
 import java.security.CodeSource;
@@ -17,7 +16,6 @@ import static utils.Helpers.listenForInput;
 import static utils.Logger.writeLogFile;
 import static utils.Logger.parseLogFile;
 
-// TODO integrate plan making
 public class Main {
     /*
      * Jingles from pixabay.com,
@@ -65,8 +63,8 @@ public class Main {
         parseFlags(args);
 
         // If input in flags, skip- else print info and get user input
-        if (this.timer.minutesInputMissing)
-            printInfo();
+        if (this.timer.isInit())
+            parser.printHelp();
 
         // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
@@ -107,7 +105,7 @@ public class Main {
             consoleClear();
             // print schedule details
             this.schedule.printScheduleInfo();
-            System.out.println("Running task " + (taskIndex+1) + "/" + numOfTasks);
+            System.out.println("Running task " + (taskIndex + 1) + "/" + numOfTasks);
 
             // print task details
             Schedule.Task currTask = this.schedule.getTaskAt(taskIndex);
@@ -172,9 +170,10 @@ public class Main {
             String key = parser.parseArgs(flag, true);
             switch (key) {
                 case "#" -> {
-                    if (currSessionType == SessionType.Undefined)
-                        this.timer.addedMinutes(Integer.parseInt(flag));
-                    currSessionType = SessionType.Normal;
+                    if (currSessionType == SessionType.Undefined) {
+                        this.timer.setMinutes(Integer.parseInt(flag));
+                        currSessionType = SessionType.Normal;
+                    }
                 }
                 case "L" -> {
                     volume -= 20;
@@ -183,9 +182,13 @@ public class Main {
                     volume -= 10;
                 }
                 case "p" -> {
+                    if (i + 1 >= flag.length()) {
+                        continue;
+                    }
                     currSessionType = SessionType.plan;
                     String filename = flags[i + 1];
                     schedule = new Schedule(filename);
+                    this.timer.initTimer();
                 }
                 case "n" -> {
                     notification = !notification;
@@ -214,12 +217,12 @@ public class Main {
     }
 
     private void parseCommands(Scanner in) throws InterruptedException {
-        while (this.timer.minutesInputMissing) {
+        while (this.timer.isInit()) {
             String line = in.nextLine();
             String input = this.parser.parseArgs(line, false);
             switch (input) {
                 case "#" -> {
-                    this.timer.addedMinutes(Integer.parseInt(line));
+                    this.timer.setMinutes(Integer.parseInt(line));
                     currSessionType = SessionType.Normal;
                 }
                 case "l" -> {
@@ -249,7 +252,7 @@ public class Main {
                     } else {
                         currSessionType = SessionType.plan;
                         schedule = new Schedule(filename);
-                        this.timer.addedMinutes(0);
+                        this.timer.initTimer();
                     }
 
                 }
@@ -273,20 +276,6 @@ public class Main {
             new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
         } else {
             new ProcessBuilder("clear").inheritIO().start().waitFor();
-        }
-    }
-
-    // printing helpers
-    private static void printInfo() {
-        try (InputStream is = Main.class.getResourceAsStream("info.txt")) {
-            assert is != null;
-            try (Scanner in = new Scanner(is)) {
-                while (in.hasNext())
-                    prettyPrint(in.nextLine());
-            }
-        } catch (Exception e) {
-            // e.printStackTrace();
-            System.out.println("Could not open info file, enter the number of minutes to begin");
         }
     }
 

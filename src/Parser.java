@@ -1,8 +1,13 @@
 import java.util.HashMap;
 import static utils.Helpers.isNumber;
+import static utils.Helpers.prettyPrint;
 
 public class Parser {
     public record Flag(String longArg, String desc) {
+        public String toString(){
+            String str = String.format("%s\t%s\n", longArg, desc);
+            return str;
+        }
     }
 
     HashMap<String, Flag> flagMap;
@@ -16,20 +21,24 @@ public class Parser {
         flagMap.put("l", new Flag("lower", "Lower volume"));
         flagMap.put("L", new Flag("Lower", "Much lower volume (only as argument)"));
         flagMap.put("u", new Flag("undo", "Undo volume change (only on info screen)"));
-        flagMap.put("t", new Flag("test", "Test current volume (only on info screen)"));
+        flagMap.put("t", new Flag("test", "Test current volume"));
         flagMap.put("n", new Flag("notify", "Disable/Enable notification when timer ends (Enabled on default)"));
         flagMap.put("p", new Flag("plan", "Start a planned session with given JSON file (-p <path to json>) "));
     }
 
-    public String toString() {
-        StringBuilder builder = new StringBuilder();
+    public void printHelp() throws InterruptedException {
+        prettyPrint("JTimer");
+        prettyPrint("Commands:");
         flagMap.forEach((k, f) -> {
-            builder.append(("-" + f));
-            builder.append(f.longArg());
-            builder.append(f.desc());
-            builder.append("\n");
+            String temp = String.format("-%s\t%s\t%s", k, f.longArg, f.desc);
+            try {
+                prettyPrint(temp);
+            } catch (InterruptedException e) {
+                // ignore
+            }
         });
-        return builder.toString();
+        prettyPrint("Enter the number of minutes to begin or start a plan");
+        prettyPrint("For an example of a plan, see: [insert url]");
     }
 
     public String parseArgs(String arg, boolean isFlag) {
