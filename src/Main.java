@@ -24,7 +24,7 @@ public class Main {
 
 
     static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
-    static final int SEC_IN_MINUTE = 1; // TODO 60
+    static final int SEC_IN_MINUTE = 60;
     static final long MILLI_TO_SEC = 1000L;
 
     private float volume = 0; // Default volume level
@@ -75,12 +75,11 @@ public class Main {
             parseLogFile(textFileName, this.timer);
 
             // Notification when it is time to rest
-            Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
 
             if (currSessionType == SessionType.Normal) {
-                runNormalSession(in, notifier);
+                runNormalSession(in);
             } else {
-                runSchedule(in, notifier);
+                runSchedule(in);
             }
 
         } finally {
@@ -90,7 +89,7 @@ public class Main {
         }
     }
 
-    private void runSchedule(Scanner in, Notifier notifier) throws InterruptedException, IOException {
+    private void runSchedule(Scanner in) throws InterruptedException, IOException {
         if (this.schedule == null) {
             System.out.println("Schedule undefined");
             return;
@@ -99,13 +98,16 @@ public class Main {
             System.out.println("Schedule is empty");
             return;
         }
+        Notifier notifier = new Notifier(notification, "JTimer Schedule: ", null);
+
         int taskIndex = 0;
         int numOfTasks = this.schedule.getSize();
         while (taskIndex < numOfTasks) {
+            String taskNumberString = (taskIndex + 1) + "/" + numOfTasks;
             consoleClear();
             // print schedule details
             this.schedule.printScheduleInfo();
-            System.out.println("Running task " + (taskIndex + 1) + "/" + numOfTasks);
+            System.out.println("Running task " + taskNumberString);
 
             // print task details
             Schedule.Task currTask = this.schedule.getTaskAt(taskIndex);
@@ -115,7 +117,7 @@ public class Main {
             countdown();
 
             // Countdown over
-            notifier.notifyUser();
+            notifier.notifyUserCustom("Finished task "+ taskNumberString, "Press Enter to proceed");
             playRandom(this.files, this.volume);
             flush();
             System.out.println("Stopped at:");
@@ -131,7 +133,9 @@ public class Main {
         }
     }
 
-    private void runNormalSession(Scanner in, Notifier notifier) throws InterruptedException, IOException {
+    private void runNormalSession(Scanner in) throws InterruptedException, IOException {
+        Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
+        
         // Print warning if entered a large amount
         if (this.timer.getMinutes() > 60) {
             prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
