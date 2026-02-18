@@ -1,4 +1,7 @@
+import java.io.InputStream;
 import java.util.HashMap;
+import java.util.Scanner;
+
 import static utils.Helpers.isNumber;
 import static utils.Helpers.prettyPrint;
 
@@ -20,25 +23,17 @@ public class Parser {
     private void initFlags() {
         flagMap.put("l", new Flag("lower", "Lower volume"));
         flagMap.put("L", new Flag("Lower", "Much lower volume (only as argument)"));
-        flagMap.put("u", new Flag("undo", "Undo volume change (only on info screen)"));
+        flagMap.put("u", new Flag("undo", "Undo volume change (only on this screen)"));
         flagMap.put("t", new Flag("test", "Test current volume"));
         flagMap.put("n", new Flag("notify", "Disable/Enable notification when timer ends (Enabled on default)"));
         flagMap.put("p", new Flag("plan", "Start a planned session with given JSON file (-p <path to json>) "));
+        flagMap.put("i", new Flag("info", "See usage examples (only on this screen)"));
     }
 
     public void printHelp() throws InterruptedException {
-        prettyPrint("JTimer");
-        prettyPrint("Commands:");
-        flagMap.forEach((k, f) -> {
-            String temp = String.format("-%s\t%s\t%s", k, f.longArg, f.desc);
-            try {
-                prettyPrint(temp);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-        });
+        this.printFlags();
         prettyPrint("Enter the number of minutes to begin or start a plan");
-        prettyPrint("For an example of a plan, see: [insert url]");
+        prettyPrint("For an example of a plan, see info");
     }
 
     public String parseArgs(String arg, boolean isFlag) {
@@ -65,7 +60,8 @@ public class Parser {
                 return key;
             }
             //two part argumemt
-            if (arg.split(" ", 2)[0].equals(value.longArg)){
+            String arg1 = arg.split(" ", 2)[0];
+            if (arg1.equals(value.longArg) || arg1.equals(key)){
                 return key;
             }
         }
@@ -82,5 +78,30 @@ public class Parser {
             return null;
         }
         return parse[1];
+    }
+
+    private void printFlags() throws InterruptedException{
+        prettyPrint("-- JTimer --");
+        prettyPrint("Flags\tVerbose\tDescription");
+        flagMap.forEach((k, f) -> {
+            String temp = String.format("-%s\t%s\t%s", k, f.longArg, f.desc);
+            try {
+                prettyPrint(temp);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+        });
+    }
+
+    public void printInfo() {
+        try (InputStream is = Main.class.getResourceAsStream("info.txt")) {
+            assert is != null;
+            try (Scanner in = new Scanner(is)) {
+                while (in.hasNext())
+                    prettyPrint(in.nextLine());
+            }
+        } catch (Exception e) {
+            System.out.println("Could not open info file, enter the number of minutes to begin");
+        }
     }
 }

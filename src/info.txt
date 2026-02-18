@@ -1,12 +1,27 @@
--- JTimer --
--- Flags:
--l to lower volume, -L to lower it dramatically, a number to begin timer immediately
--- Examples:
-- java -jar JTimer.jar
+-- JTimer info --
+-- Common usage:
+- java -jar JTimer.jar 20
+Start a timer immediately for 20 minute session.
+After the session you may change the minutes, or restart as is.
+-- Additional Usage Examples:
 - java -jar JTimer.jar -L (for a much lower volume)
 - java -jar JTimer.jar -l 20 (to start lower, without any more prompts)
-- java -jar JTimer.jar -p (to start a planned session)
-
-Enter the number of minutes to begin, or:
-'test' to check the volume, 'lower' to decrease volume, 'undo' to cancel previous 'lower' command
-'notify' to set or un-set notification on timer end
+- java -jar JTimer.jar -n 10 (to start immediately, without notification tray)
+-- Start a Schedule Example:
+- java -jar JTimer.jar -p <file> (to start a planned session)
+-- Planned Session Example (Pomodoro 20/5)
+{
+    "Repeat": true, 
+    "ScheduleTitle": "Pomodoro",
+    "TaskList": [
+        {
+            "TaskTitle": "Work",
+            "time": 20
+        },
+        {
+            "TaskTitle": "Break",
+            "time": 5
+        }
+    ]
+}
+-- Note: There is no limit on number of tasks

@@ -22,7 +22,7 @@ public class Main {
      * https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
-    // static int screenTimeSumMinutes = 0;
+
     static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
     static final int SEC_IN_MINUTE = 1; // TODO 60
     static final long MILLI_TO_SEC = 1000L;
@@ -196,7 +196,7 @@ public class Main {
                 case "t" -> {
                     playRandom(files, volume);
                 }
-                case "u" -> {
+                case "u", "i" -> {
                     continue;
                 }
                 case null, default -> {
@@ -255,6 +255,9 @@ public class Main {
                         this.timer.initTimer();
                     }
 
+                }
+                case "i" -> {
+                    parser.printInfo();
                 }
                 case null, default -> {
                     prettyPrint("Please enter a valid command \\ number");
