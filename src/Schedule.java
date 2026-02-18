@@ -8,9 +8,9 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class Schedule {
-    public record Task(String name, int time) {
+    public record Task(String label, int time) {
         public void info() {
-            System.out.println("Task <" + name + ">: " + time + " min");
+            System.out.println("Task <" + label + ">: " + time + " min");
         }
     }
 
@@ -49,8 +49,8 @@ public class Schedule {
         return this.repeat;
     }
 
-    public void addNewTask(String name, int time) {
-        Task task = new Task(name, time);
+    public void addNewTask(String label, int time) {
+        Task task = new Task(label, time);
         taskCollection.add(task);
     }
 
@@ -81,16 +81,16 @@ public class Schedule {
     private void proccessJson(String jsonText) {
         // process the outer object
         JSONObject base = new JSONObject(jsonText);
-        this.setRepeatition(base.getBoolean("Repeat"));
-        this.setTitle(base.getString("ScheduleTitle"));
+        this.setRepeatition(base.getBoolean("repeat"));
+        this.setTitle(base.getString("title"));
 
         // process the inner list
-        JSONArray taskArray = base.getJSONArray("TaskList");
+        JSONArray taskArray = base.getJSONArray("tasks");
         for (int i = 0; i < taskArray.length(); i++) {
             JSONObject taskObject = taskArray.getJSONObject(i);
-            String name = taskObject.getString("TaskTitle");
+            String label = taskObject.getString("label");
             int time = taskObject.getInt("time");
-            this.addNewTask(name, time);
+            this.addNewTask(label, time);
         }
     }
 }

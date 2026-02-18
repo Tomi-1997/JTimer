@@ -28,7 +28,7 @@ public class ScheduleTest {
         assertEquals("Collection should have one task",1,collection.getSize());
         Schedule.Task temp = collection.getTaskAt(0);
         assertEquals("Task times should be same",10, temp.time());
-        assertEquals("Task mission should be same","mission", temp.name());
+        assertEquals("Task mission should be same","mission", temp.label());
     }
 
     @Test
@@ -63,7 +63,7 @@ public class ScheduleTest {
         for (int i = 0; i < collection.getSize(); i++){
             temp = collection.getTaskAt(i);
             taskname = "Task " + (i+1);
-            assertEquals(taskname, temp.name());
+            assertEquals(taskname, temp.label());
             assertEquals(10, temp.time());
         }
     }
