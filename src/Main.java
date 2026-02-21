@@ -1,322 +1,330 @@
 import java.io.File;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintWriter;
 import java.net.URL;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+
 import java.security.CodeSource;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-public class Main
-{
+import utils.Timer;
+import utils.Helpers.SessionType;
+import static utils.Helpers.prettyPrint;
+import static utils.Helpers.listenForInput;
+
+import static utils.Logger.writeLogFile;
+import static utils.Logger.parseLogFile;
+
+public class Main {
     /*
-        Jingles from pixabay.com, https://freesound.org/people/phantastonia/sounds/270602/#
+     * Jingles from pixabay.com,
+     * https://freesound.org/people/phantastonia/sounds/270602/#
      */
 
+
+    static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
     static final int SEC_IN_MINUTE = 60;
     static final long MILLI_TO_SEC = 1000L;
-    static int screenTimeSumMinutes = 0;
-    static String currentDate = SimpleDateFormat.getDateInstance().format(Calendar.getInstance().getTime());
 
-    public static void main(String[] args) throws InterruptedException, IOException
-    {
-        // Required variables
-        String folderName = "jingles";                  // Folder to play jingles from
-        String textFileName = ".JTimer_Screen_Time";    // Saved screen time between program runs (date, sum)
-        float volume = 0;                               // Default volume level
-        int minutes = -1;                               // Minute amount between each session
-        boolean minutesInputMissing = true;             // Did the program start without minutes as a flag
-        boolean notification = true;                    // Get attention with User notification tray
+    private float volume = 0; // Default volume level
+    private boolean notification = true; // Get attention with User notification tray
 
-        // Init jingle list to play in the end of a session
-        ArrayList<String> files = new ArrayList<>();
-        initJingles(files, folderName);
+    // audio files
+    private ArrayList<String> files;
+    private String folderName = "jingles"; // Folder to play jingles from
+    private String textFileName = ".JTimer_Screen_Time"; // Saved screen time between program runs (date, sum)
 
-        // Parse flags
-        for (String flag : args)
-        {
-            if (isNumber(flag))
-            {
-                minutes = Integer.parseInt(flag);
-                if (minutes < 0) minutes = -minutes;
-                minutesInputMissing = false;
-                continue;
-            }
+    private Timer timer;
+    private Parser parser;
+    private Schedule schedule;
 
-            // If the following flags don't match the "-char" pattern, continue
-            if (flag.length() != 2) continue;
-            if (flag.charAt(0) != '-') continue;
+    private SessionType currSessionType;
 
-            switch (flag.charAt(1))
-            {
-                case 'L' -> volume -= 20;
-                case 'l' -> volume -= 10;
-            }
-        }
+    public static void main(String[] args) throws InterruptedException, IOException {
+        Main appInstance = new Main();
+        appInstance.init();
+        appInstance.run(args);
+    }
+
+    public Main() {
+        this.files = new ArrayList<>();
+        this.timer = new Timer();
+        this.parser = new Parser();
+        this.schedule = null;
+    }
+
+    // main class methods
+    public void init() throws IOException {
+        initJingles(this.files, this.folderName);
+    }
+
+    public void run(String[] args) throws InterruptedException, IOException {
+        parseFlags(args);
 
         // If input in flags, skip- else print info and get user input
-        if (minutesInputMissing) printInfo();
+        if (this.timer.isInit())
+            parser.printHelp();
 
         // Get user input for volume commands or to start the program
         Scanner in = new Scanner(System.in);
-        while (minutesInputMissing)
-        {
-            String input = in.nextLine();
-            boolean skipParse = false;
-            if (input.toLowerCase().contains("lower"))
-            {
-                prettyPrint("Lowered volume");
-                volume -= 10;
-                skipParse = true;
+        try {
+            parseCommands(in);
+            // Try to read from file accumulated minutes
+            // If earlier date, reset
+            parseLogFile(textFileName, this.timer);
+
+            // Notification when it is time to rest
+
+            if (currSessionType == SessionType.Normal) {
+                runNormalSession(in);
+            } else {
+                runSchedule(in);
             }
-            if (input.toLowerCase().contains("undo"))
-            {
-                prettyPrint("Undid lowering");
-                volume = Math.min(0, volume + 10);
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("test"))
-            {
-                prettyPrint("Playing ");
-                playRandom(files, volume);
-                skipParse = true;
-            }
-            if (input.toLowerCase().contains("notify"))
-            {
-                notification = !notification;
-                prettyPrint("Notification Active: " + notification);
-                skipParse = true;
-            }
-            if (skipParse) continue;
-            try
-            {
-                minutes = Integer.parseInt(input);
-                if (minutes < 0) minutes = -minutes;
-                minutesInputMissing = false;
-            }
-            catch (Exception e)
-            {
-                prettyPrint("Enter a valid number \\ command");
-                // Continue loop
+
+        } finally {
+            if (in != null) {
+                in.close();
             }
         }
+    }
 
-        // Print warning if entered a large amount
-        if (minutes > 60)
-        {
-            prettyPrint("You have entered more than an hour ("+minutes+" min), are you sure? press enter to continue");
-            listenForEnter();
+    private void runSchedule(Scanner in) throws InterruptedException, IOException {
+        if (this.schedule == null) {
+            System.out.println("Schedule undefined");
+            return;
         }
+        if (this.schedule.getSize() < 1) {
+            System.out.println("Schedule is empty");
+            return;
+        }
+        Notifier notifier = new Notifier(notification, "JTimer Schedule: ", null);
 
-        // Try to read from file accumulated minutes
-        // If earlier date, reset
-        parseLogFile(textFileName);
+        int taskIndex = 0;
+        int numOfTasks = this.schedule.getSize();
+        while (taskIndex < numOfTasks) {
+            String taskNumberString = (taskIndex + 1) + "/" + numOfTasks;
+            consoleClear();
+            // print schedule details
+            this.schedule.printScheduleInfo();
+            System.out.println("Running task " + taskNumberString);
 
+            // print task details
+            Schedule.Task currTask = this.schedule.getTaskAt(taskIndex);
+            currTask.info();
+            this.timer.setMinutes(currTask.time());
 
-        // Notification when it is time to rest
+            countdown();
+
+            // Countdown over
+            notifier.notifyUserCustom("Finished task "+ taskNumberString, "Press Enter to proceed");
+            playRandom(this.files, this.volume);
+            flush();
+            System.out.println("Stopped at:");
+            System.out.println(Calendar.getInstance().getTime());
+            System.out.println("Overall Screen Time: " + timer.getScreenTimeSumString());
+            System.out.println("Press enter to continue");
+
+            // Awaiting user
+            listenForInput(in, timer, currSessionType);
+            notifier.notifyRemove();
+
+            taskIndex = schedule.isRepeat() ? (taskIndex + 1) % numOfTasks : (taskIndex + 1);
+        }
+    }
+
+    private void runNormalSession(Scanner in) throws InterruptedException, IOException {
         Notifier notifier = new Notifier(notification, "JTimer:", "Time for a break");
-
+        
+        // Print warning if entered a large amount
+        if (this.timer.getMinutes() > 60) {
+            prettyPrint("--WARNING: the session is over an hour (" + this.timer.getMinutes()
+                    + " min)");
+            prettyPrint("Insert a number to change time, otherwise press enter to continue");
+            listenForInput(in, this.timer, currSessionType);
+        }
 
         // Main loop -
         // 1 print to console each minute
         // 2 play a jingle at the end
         // 3 wait for enter
-        while (true)
-        {
+        while (true) {
             consoleClear();
-            countdown(minutes, textFileName);
+            countdown();
 
             // Countdown over
             notifier.notifyUser();
-            playRandom(files, volume);
+            playRandom(this.files, this.volume);
             flush();
             System.out.println("Stopped at:");
             System.out.println(Calendar.getInstance().getTime());
-            System.out.println("Overall Screen Time: " + getScreenTimeSumString());
-            System.out.println("Press enter to restart");
+            System.out.println("Overall Screen Time: " + timer.getScreenTimeSumString());
+            System.out.println("Put a number to modify time");
+            System.out.println("Otherwise, press enter to restart");
 
             // Awaiting user
-            listenForEnter();
+            listenForInput(in, timer, currSessionType);
             notifier.notifyRemove();
         }
     }
 
-    private static void parseLogFile(String filename)
-    {
-        Path file = Paths.get(filename);
-        try
-        {
-            List<String> s = Files.readAllLines(file);
-            String fileDate = s.get(0);
-
-            // Different day, don't load data
-            if (fileDate.compareTo(currentDate) != 0)
-            {
-                return;
+    private void parseFlags(String[] flags) {
+        for (int i = 0; i < flags.length; i++) {
+            String flag = flags[i];
+            String key = parser.parseArgs(flag, true);
+            switch (key) {
+                case "#" -> {
+                    if (currSessionType == SessionType.Undefined) {
+                        this.timer.setMinutes(Integer.parseInt(flag));
+                        currSessionType = SessionType.Normal;
+                    }
+                }
+                case "L" -> {
+                    volume -= 20;
+                }
+                case "l" -> {
+                    volume -= 10;
+                }
+                case "p" -> {
+                    if (i + 1 >= flag.length()) {
+                        continue;
+                    }
+                    currSessionType = SessionType.plan;
+                    String filename = flags[i + 1];
+                    schedule = new Schedule(filename);
+                    this.timer.initTimer();
+                }
+                case "n" -> {
+                    notification = !notification;
+                }
+                case "t" -> {
+                    playRandom(files, volume);
+                }
+                case "u", "i" -> {
+                    continue;
+                }
+                case null, default -> {
+                    continue;
+                }
             }
-
-            // Parse accumulated minutes to int
-            screenTimeSumMinutes = Integer.parseInt(s.get(1));
-        }
-        catch (IOException ignored)
-        {
-
         }
     }
 
-    private static void writeLogFile(String filename, int minutes)
-    {
-        try
-        {
-            PrintWriter writer = new PrintWriter(filename, StandardCharsets.UTF_8);
-            writer.println(currentDate);
-            writer.println(minutes);
-            writer.close();
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
+    private void countdown() throws InterruptedException {
+        int minutes = this.timer.getMinutes();
+        for (int i = minutes; i > 0; i--) {
+            System.out.println(i + " minutes left");
+            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
+            this.timer.updateScreenTime();
+            writeLogFile(this.textFileName, this.timer.getScreenTime());
         }
     }
 
-    private static String getScreenTimeSumString()
-    {
-        int screenTime = screenTimeSumMinutes;
-        int hours = 0, minutes;
-        String ans = "";
-        while (screenTime >= 60)
-        {
-            screenTime = screenTime - 60;
-            hours++;
+    private void parseCommands(Scanner in) throws InterruptedException {
+        while (this.timer.isInit()) {
+            String line = in.nextLine();
+            String input = this.parser.parseArgs(line, false);
+            switch (input) {
+                case "#" -> {
+                    this.timer.setMinutes(Integer.parseInt(line));
+                    currSessionType = SessionType.Normal;
+                }
+                case "l" -> {
+                    prettyPrint("Lowered volume");
+                    volume -= 10;
+                }
+
+                case "u" -> {
+                    prettyPrint("Undid lowering");
+                    volume = Math.min(0, volume + 10);
+
+                }
+                case "t" -> {
+                    prettyPrint("Playing");
+                    playRandom(this.files, this.volume);
+
+                }
+                case "n" -> {
+                    notification = !notification;
+                    prettyPrint("Notification Enabled-> " + notification);
+
+                }
+                case "p" -> {
+                    String filename = parser.parseFilename(line);
+                    if (filename == null) {
+                        prettyPrint("--Error: Missing filename");
+                    } else {
+                        currSessionType = SessionType.plan;
+                        schedule = new Schedule(filename);
+                        this.timer.initTimer();
+                    }
+
+                }
+                case "i" -> {
+                    parser.printInfo();
+                }
+                case null, default -> {
+                    prettyPrint("Please enter a valid command \\ number");
+
+                }
+
+            }
         }
-        minutes = screenTime;
-        ans += hours > 9? hours : "0" + hours;
-        ans += ":";
-        ans += minutes > 9? minutes : "0" + minutes;
-        return ans;
     }
 
-    private static void initJingles(ArrayList<String> files, String filename) throws IOException
-    {
+    // console helpers
+    private static void flush() throws IOException {
+        System.in.read(new byte[System.in.available()]);
+    }
+
+    private static void consoleClear() throws IOException, InterruptedException {
+        final String os = System.getProperty("os.name");
+        if (os.toLowerCase().contains("windows")) {
+            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+        } else {
+            new ProcessBuilder("clear").inheritIO().start().waitFor();
+        }
+    }
+
+    // audio helpers
+    private static void initJingles(ArrayList<String> files, String filename) throws IOException {
+        /**
+         * Init jingle list to play in the end of a session
+         */
         /* Ran as a JAR, add all files that end with .wav */
         initJinglesJAR(files);
-        if (files.size() > 0) return;
+        if (files.size() > 0)
+            return;
 
         /* Ran from IDE, add all files from the given folder */
         File f = new File("src\\" + filename);
-        for (String str : Objects.requireNonNull(f.list()))
-        {
+        for (String str : Objects.requireNonNull(f.list())) {
             files.add(filename + "\\" + str);
         }
     }
 
-    private static void initJinglesJAR(ArrayList<String> files) throws IOException
-    {
+    private static void initJinglesJAR(ArrayList<String> files) throws IOException {
         CodeSource src = Main.class.getProtectionDomain().getCodeSource();
 
-        if( src != null )
-        {
+        if (src != null) {
             URL jar = src.getLocation();
-            ZipInputStream zip = new ZipInputStream( jar.openStream());
+            ZipInputStream zip = new ZipInputStream(jar.openStream());
             ZipEntry ze;
 
-            while( ( ze = zip.getNextEntry() ) != null )
-            {
+            while ((ze = zip.getNextEntry()) != null) {
                 String entryName = ze.getName();
-                if( entryName.endsWith(".wav") )
-                {
-                    files.add( entryName );
+                if (entryName.endsWith(".wav")) {
+                    files.add(entryName);
                 }
             }
 
         }
     }
 
-    private static void printInfo()
-    {
-        try
-        {
-            InputStream is = Main.class.getResourceAsStream("info.txt");
-            assert is != null;
-            Scanner in = new Scanner(is);
-            while (in.hasNext()) prettyPrint(in.nextLine());
-        }
-        catch (Exception e)
-        {
-//            e.printStackTrace();
-            System.out.println("Could not open info file, enter the number of minutes to begin");
-        }
-    }
-
-    private static boolean isNumber(String flag)
-    {
-        try
-        {
-            Integer.parseInt(flag);
-        }
-        catch (Exception e)
-        {
-            return false;
-        }
-        return true;
-    }
-
-    private static void flush() throws IOException
-    {
-        int ignored;
-        ignored = System.in.read(new byte[System.in.available()]);
-    }
-
-    private static void consoleClear() throws IOException, InterruptedException
-    {
-        final String os = System.getProperty("os.name");
-        if (os.toLowerCase().contains("windows"))
-        {
-            new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
-        }
-        else
-        {
-            new ProcessBuilder("clear").inheritIO().start().waitFor();
-        }
-    }
-
-    private static void countdown(int minutes, String filename) throws InterruptedException
-    {
-        for (int i = minutes; i > 0; i--)
-        {
-            System.out.println(i + " minutes left");
-            Thread.sleep(SEC_IN_MINUTE * MILLI_TO_SEC);
-            screenTimeSumMinutes++;
-            writeLogFile(filename, screenTimeSumMinutes);
-        }
-    }
-
-    private static void listenForEnter() throws IOException
-    {
-        int ignored = System.in.read(new byte[2]); // Enter
-        ignored = System.in.read(new byte[System.in.available()]); // Whatever else there is besides enter
-    }
-
-    private static void prettyPrint(String toPrint) throws InterruptedException
-    {
-        for (int i = 0; i < toPrint.length(); i++)
-        {
-            System.out.print(toPrint.charAt(i));
-            Thread.sleep(2);
-        }
-        System.out.println();
-    }
-
-    private static void playRandom(ArrayList<String> files, float volume)
-    {
+    private static void playRandom(ArrayList<String> files, float volume) {
         int rndIndex = new Random().nextInt(files.size());
         String filename = files.get(rndIndex);
         Audio.play(filename, volume);
     }
+
 }

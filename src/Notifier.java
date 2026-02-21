@@ -1,29 +1,43 @@
 import java.awt.*;
 
-public class Notifier
-{
+public class Notifier {
     private final boolean notify;
-    private final String h;
-    private final String p;
+    private final String header;
+    private final String paragraph;
     private TrayIcon trayIcon;
 
-
-    public Notifier(boolean notify, String h, String p)
-    {
+    public Notifier(boolean notify, String header, String paragraph) {
         this.notify = notify;
-        this.h = h;
-        this.p = p;
+        this.header = header;
+        this.paragraph = paragraph;
     }
 
-
-    public void notifyUser()
-    {
-        if (!notify) return;
-
-        // Check if the system supports the tray
-        if (!SystemTray.isSupported())
-        {
+    public void notifyUser() {
+        if (!isNotifiable()) {
             return;
+        }
+        trayIcon.displayMessage(this.header, this.paragraph, TrayIcon.MessageType.NONE);
+    }
+
+    public void notifyUserCustom(String header, String paragraph) {
+        if (!isNotifiable()) {
+            return;
+        }
+        trayIcon.displayMessage(this.header + header, paragraph, TrayIcon.MessageType.NONE);
+    }
+
+    public void notifyRemove() {
+        SystemTray tray = SystemTray.getSystemTray();
+        tray.remove(trayIcon);
+    }
+
+    private boolean isNotifiable() {
+        if (!notify) {
+            return false;
+        }
+
+        if (!SystemTray.isSupported()) {
+            return false;
         }
 
         // Create a tray icon
@@ -31,22 +45,13 @@ public class Notifier
         trayIcon.setImageAutoSize(true);
 
         // Add the tray icon to the system tray
-        try
-        {
+        try {
             SystemTray tray = SystemTray.getSystemTray();
             tray.add(trayIcon);
-        } catch (AWTException e)
-        {
-            return;
+        } catch (AWTException e) {
+            return false;
         }
 
-        // Show a notification
-        trayIcon.displayMessage(this.h, this.p, TrayIcon.MessageType.NONE);
-    }
-
-    public void notifyRemove()
-    {
-        SystemTray tray = SystemTray.getSystemTray();
-        tray.remove(trayIcon);
+        return true;
     }
 }

@@ -1,0 +1,18 @@
+{
+    "repeat": true, 
+    "title": "Example",
+    "tasks": [
+        {
+            "label": "Task 1",
+            "time": 10
+        },
+        {
+            "label": "Task 2",
+            "time": 10
+        },
+        {
+            "label": "Task 3",
+            "time": 10
+        }
+    ]
+}
